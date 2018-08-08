@@ -9,6 +9,8 @@ database](https://github.com/cabal-club/cabal-node). `cabal-client` handles
 - remembering what messages or channels have / have not been read by the user
 - remembering what channels the user has open
 
+*This README is just a proposal for an API.*
+
 ## Usage
 
 ```js
