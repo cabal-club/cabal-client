@@ -4,7 +4,7 @@
 
 There are certain pieces of state that clients seem to need to manage that need
 to be stored across sessions but don't belong in the [p2p
-database](https://github.com/cabal-club/cabal-node). `cabal-client` handles
+database](https://github.com/cabal-club/cabal-core). `cabal-client` handles
 
 - remembering what messages or channels have / have not been read by the user
 - remembering what channels the user has open
@@ -14,7 +14,7 @@ database](https://github.com/cabal-club/cabal-node). `cabal-client` handles
 ## Usage
 
 ```js
-var Cabal = require('cabal')
+var Cabal = require('cabal-core')
 var Client = require('cabal-client')
 
 var cabal = Cabal(ram, null, {username: 'bob'})
