@@ -1,0 +1,196 @@
+const Cabal = require('cabal-core')
+const CabalDetails = require('./cabal-details')
+const crypto = require('hypercore-crypto')
+const ram = require('random-access-memory')
+const memdb = require('memdb')
+const level = require('level')
+const path = require('path')
+
+/*
+const cabalDns = require('dat-dns')({
+  hashRegex: /^[0-9a-f]{64}?$/i,
+  recordName: 'cabal',
+  protocolRegex: /^cabal:\/\/([0-9a-f]{64})/i,
+  txtRegex: /^"?cabalkey=([0-9a-f]{64})"?$/i,
+  persistentCache: {
+    read: async function (name, err) {
+      if (name in config.cache) {
+        var cache = config.cache[name]
+        if (cache.expiresAt < Date.now()) { // if ttl has expired: warn, but keep using
+          console.error(`${chalk.redBright('Note:')} the TTL for ${name} has expired`)
+        }
+        return cache.key
+      }
+      // dns record wasn't found online and wasn't in the cache
+      throw err
+    },
+    write: async function (name, key, ttl) {
+      var expireOffset = +(new Date(ttl * 1000)) // convert to epoch time
+      var expiredTime = Date.now() + expireOffset
+      config.cache[name] = { key: key, expiresAt: expiredTime }
+      saveConfig(configFilePath, config)
+    }
+  }
+})
+*/
+class Client {
+  constructor(opts) {
+    if (!(this instanceof Client)) return new Client(opts)
+    // This is redundant, but we might want to keep the cabal map around
+    // in the case the user has access to cabal instances
+    this._keyToCabal = {}
+    // maps a cabal-core instance to a CabalDetails object
+    this.cabals = new Map() 
+    this.currentCabal = null
+    this.config = opts.config
+    this.maxFeeds = opts.maxFeeds || 1000
+    this.pageSize = opts.pageSize || 100
+  }
+
+  static getDatabaseVersion() {
+    return Cabal.databaseVersion
+  }
+  
+  static scrub(key) {
+    return key.replace('cabal://', '').replace('cbl://', '').replace('dat://', '').replace(/\//g, '')
+  }
+
+  createCabal() {
+    return this.addCabal(crypto.keyPair().publicKey.toString('hex'))
+  }
+
+  addCabal(key) {
+    return new Promise((resolve, reject) => {
+      var cabal
+      // error states?
+      if (typeof key === "string") {
+        key = Client.scrub(key)
+        const {temp, dbdir} = this.config
+        const storage = temp ? ram : dbdir + key
+        if (!temp) try { mkdirp.sync(path.join(dbdir, key, 'views')) } catch (e) {}
+        var db = temp ? memdb() : level(path.join(dbdir, key, 'views'))
+        cabal = Cabal(storage, key, {db: db, maxFeeds: this.maxFeeds})
+        this._keyToCabal[key] = cabal
+      } else {
+        // a cabal instance was passed in
+        cabal = key
+        this._keyToCabal[cabal.key] = cabal
+      }
+
+      if (!this.currentCabal) {
+        this.currentCabal = cabal
+      }
+
+      cabal.ready(() => {
+        const details = new CabalDetails(cabal, this.pageSize)
+        this.cabals.set(cabal, details)
+        cabal.swarm()
+        resolve(details)
+      })
+    })
+  }
+
+  focusCabal (key) {
+    const cabal = this._coerceToCabal(key)
+    if (!cabal) {
+      return false
+    }
+    this.currentCabal = cabal
+  }
+
+  removeCabal(key) {
+    const cabal = this._coerceToCabal(key)
+    if (!cabal) {
+      return false
+    }
+
+    const details = this.cabals.get(cabal)
+    details._destroy()
+
+    // burn everything we know about the cabal
+    this._keyToCabal[key] = null
+    return this.cabals.delete(cabal)
+  }
+
+  getCabalKeys() {
+    return Object.keys(this._keyToCabal) // ???: sorted?
+  }
+
+  getCabalByKey(key) {
+    if (!key) {
+      return this.currentCabal
+    }
+    return this._keyToCabal[key]
+  }
+
+  cabalToDetails(cabal=this.currentCabal) {
+    return this.cabals.get(cabal)
+  }
+
+  connect(cabal=this.currentCabal) {
+    cabal.ready(cabal.swarm) 
+  }
+
+  getUsers(cabal=this.currentCabal) {
+    return this.cabals.get(cabal).getUsers()
+  }
+
+  getJoinedChannels(cabal=this.currentCabal) {
+    return this.cabals.get(cabal).getJoinedChannels()
+  }
+
+  getChannels(cabal=this.currentCabal) {
+    return this.cabals.get(cabal).getChannels()
+  }
+
+  _coerceToCabal(key) {
+    if (key instanceof Cabal) {
+      return key
+    }
+    return this._keyToCabal[key]
+  }
+
+  subscribe(cabal=this.currentCabal, listener) {
+    this.cabals.get(cabal).on('update', listener)
+  }
+
+  unsubscribe(cabal=this.currentCabal, listener) {
+    this.cabals.get(cabal).removeListener('update', listener)
+  }
+
+  getMessages(cabal=this.currentCabal, opts, cb) {
+    var details = this.cabals.get(cabal)
+    if (typeof opts === 'function') {
+      cb = opts
+      opts = null
+    }
+    if (!opts.channel) {
+        opts.channel = details.currentChannel
+    }
+    const prom = details.getChannel(opts.channel).getPage(opts.limit)
+    if (!cb) {
+      return prom
+    }
+    prom.then(cb)
+  }
+
+  getNumberUnreadMessages(cabal=this.currentCabal, channel) {
+    return this.cabals.get(cabal).getChannel(channel).getNewMessageCount()
+  }
+
+  // returns { newMessageCount: <number of messages unread>, lastRead: <timestamp> }
+
+  openChannel(channel) {
+    return this.cabals.get(cabal).openChannel(channel)
+  }
+
+  closeChannel(channel) {
+    return this.cabals.get(cabal).closeChannel(channel)
+  }
+
+  markChannelRead(channel) {
+    this.cabals.get(cabal).getChannel(channel).markAsRead()
+  }
+}
+
+module.exports = Client
