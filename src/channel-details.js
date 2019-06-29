@@ -12,7 +12,7 @@ class ChannelDetails {
     maybe store a negative offset to look up?*/
     this.lastRead = 0 /* timestamp in epoch time */
     this.joined = false
-    this.open = false
+    this.opened = false
   }
 
   toString() {
@@ -20,7 +20,7 @@ class ChannelDetails {
   }
 
   handleMessage(message) {
-    if (!this.open) {
+    if (!this.opened) {
       // ++var is an optimization:
       // var++ creates a temporary variable while ++var doesn't
       ++this.newMessageCount
@@ -28,7 +28,7 @@ class ChannelDetails {
   }
   
   close() {
-    this.open = false
+    this.opened = false
   }
 
   getNewMessageCount() {
@@ -40,7 +40,7 @@ class ChannelDetails {
   }
 
   open() {
-    this.open = true
+    this.opened = true
     const resp = { newMessageCount: this.newMessageCount, lastRead: this.lastRead }
     this.newMessageCount = 0
     return resp

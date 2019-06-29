@@ -11,10 +11,12 @@ class CabalDetails extends EventEmitter {
     this.pageSize = pageSize
 
     this.channels = {
-      '!status': new ChannelDetails() // ???: what does this need?
+      // '!status': new ChannelDetails() // ???: what does this need?
+      'default': new ChannelDetails(this._cabal, "default") // 
     }
-
-    this.currentChannel = null // a ChannelDetails instance
+    
+    // make default the first channel if no saved state exists
+    this.currentChannel = this.channels["default"] // a ChannelDetails instance
     this.name = ''
     this.topic = ''
     this.users = {} // public keys -> cabal-core user?
@@ -60,9 +62,9 @@ class CabalDetails extends EventEmitter {
   openChannel(channel) {
     this.currentChannel.close()
     this.currentChannel = this.channels[channel]
-    const deetz = this.currentChannel.open()
+    const unreadState = this.currentChannel.open()
     this._emitUpdate()
-    return deetz
+    return unreadState
   }
 
   closeChannel(channel) {
@@ -98,6 +100,11 @@ class CabalDetails extends EventEmitter {
   
   joinChannel(channel) {
     var details = this.channels[channel]
+    // we created a channel
+    if (!details) {
+        details = new ChannelDetails(this._cabal, channel)
+        this.channels[channel] = details
+    }
     // we weren't already in the channel
     if (details.join()) { 
       var joinMsg = {

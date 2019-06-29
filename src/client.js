@@ -96,6 +96,7 @@ class Client {
       return false
     }
     this.currentCabal = cabal
+    return this.cabalToDetails(cabal)
   }
 
   removeCabal(key) {
@@ -114,6 +115,10 @@ class Client {
 
   getCabalKeys() {
     return Object.keys(this._keyToCabal) // ???: sorted?
+  }
+
+  getCurrentCabal () {
+      return this.cabalToDetails(this.currentCabal)
   }
 
   getCabalByKey(key) {
@@ -158,11 +163,11 @@ class Client {
     this.cabals.get(cabal).removeListener('update', listener)
   }
 
-  getMessages(cabal=this.currentCabal, opts, cb) {
+  getMessages(opts, cb, cabal=this.currentCabal,) {
     var details = this.cabals.get(cabal)
     if (typeof opts === 'function') {
       cb = opts
-      opts = null
+      opts = {}
     }
     if (!opts.channel) {
         opts.channel = details.currentChannel
@@ -180,15 +185,15 @@ class Client {
 
   // returns { newMessageCount: <number of messages unread>, lastRead: <timestamp> }
 
-  openChannel(channel) {
+  openChannel(channel, cabal=this.currentCabal) {
     return this.cabals.get(cabal).openChannel(channel)
   }
 
-  closeChannel(channel) {
+  closeChannel(channel, cabal=this.currentCabal) {
     return this.cabals.get(cabal).closeChannel(channel)
   }
 
-  markChannelRead(channel) {
+  markChannelRead(cabal=this.currentCabal, channel) {
     this.cabals.get(cabal).getChannel(channel).markAsRead()
   }
 }
