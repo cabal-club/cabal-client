@@ -13,6 +13,7 @@ class ChannelDetails {
     this.lastRead = 0 /* timestamp in epoch time */
     this.joined = false
     this.opened = false
+    this.topic = ''
   }
 
   toString() {
@@ -60,7 +61,7 @@ class ChannelDetails {
     return joined
   }
 
-  getPage(limit, lastTimestamp = Date.now()) {
+  getPage(limit = -1, lastTimestamp = Date.now()) {
     return new Promise((resolve, reject) => {
       const rs = this._cabal.messages.read(this.name, { limit, lt: lastTimestamp })
       collect(rs, (err, msgs) => {

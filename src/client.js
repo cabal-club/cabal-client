@@ -163,19 +163,16 @@ class Client {
     this.cabals.get(cabal).removeListener('update', listener)
   }
 
-  getMessages(opts, cb, cabal=this.currentCabal,) {
+  getMessages(opts, cb, cabal=this.currentCabal) {
     var details = this.cabals.get(cabal)
     if (typeof opts === 'function') {
       cb = opts
       opts = {}
-    }
-    if (!opts.channel) {
-        opts.channel = details.currentChannel
-    }
+    } 
+    opts = opts || {}
+    if (!opts.channel) { opts.channel = details.currentChannel }
     const prom = details.getChannel(opts.channel).getPage(opts.limit)
-    if (!cb) {
-      return prom
-    }
+    if (!cb) { return prom }
     prom.then(cb)
   }
 

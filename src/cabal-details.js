@@ -28,6 +28,7 @@ class CabalDetails extends EventEmitter {
   messageListener(message) {
     let channel = message.value.content.channel
     this.channels[channel].handleMessage(message)
+    this._emitUpdate()
       // publish message up to consumer
     /* `message` is of type
     { 
@@ -44,19 +45,27 @@ class CabalDetails extends EventEmitter {
   }
 
   publishMessage(msg, opts, cb) {
+    if (!cb) { cb = noop } 
     if (!msg.content.channel) {
       msg.content.channel = this.currentChannel.name
     }
     if (!msg.type) msg.type = "chat/text"
-    this._cabal.publish(msg, opts, cb)
+      this._cabal.publish(msg, opts, (err, m) => {
+          this._emitUpdate()
+          cb(err, m)
+      })
   }
 
   publishNick(nick, cb) {
-    this._cabal.publishNick(arg, cb)
+    this._cabal.publishNick(nick, cb)
   }
 
   publishChannelTopic(channel, topic, cb) {
     this._cabal.publishChannelTopic(channel, topic, cb)
+  }
+
+  getTopic(channel=this.currentChannel.name) {
+    return this.channels[channel].topic || ''
   }
 
   openChannel(channel) {
@@ -161,6 +170,7 @@ class CabalDetails extends EventEmitter {
       this.user.key = lkey
       // try to get more data for user
       this._cabal.users.get(lkey, (err, user) => {
+          if (!user) { return }
         this.user = user
         this.user.local = true
         this.user.online = true
@@ -189,10 +199,9 @@ class CabalDetails extends EventEmitter {
     cabal.users.getAll((err, users) => {
       if (err) return
       this.users = users
-      //this._initializeUser()
+      this._initializeUser()
 
       this.registerListener(cabal.users.events, 'update', (key) => {
-        // TODO: rate-limit
         cabal.users.get(key, (err, user) => {
           if (err) return
           this.users[key] = Object.assign(this.users[key] || {}, user)
@@ -202,7 +211,8 @@ class CabalDetails extends EventEmitter {
       })
 
       this.registerListener(cabal.topics.events, 'update', (msg) => {
-        this.topic = msg.value.content.topic
+          var { channel, text } = msg.value.content
+          this.channels[channel].topic = text
         this._emitUpdate()
       })
 
@@ -234,5 +244,7 @@ class CabalDetails extends EventEmitter {
     }) 
   }
 }
+
+function noop () {}
 
 module.exports = CabalDetails
