@@ -15,14 +15,14 @@ class CabalDetails extends EventEmitter {
       'default': new ChannelDetails(this._cabal, "default") // 
     }
     
-    // make default the first channel if no saved state exists
-    this.currentChannel = this.channels["default"] // a ChannelDetails instance
     this.name = ''
     this.topic = ''
     this.users = {} // public keys -> cabal-core user?
     this.listeners = [] // keep track of listeners so we can remove them when we remove a cabal
     this.user = { local: true, online: true, key: '', name: '' }
     this._initialize()
+    // make default the first channel if no saved state exists
+    this.joinChannel("default")
   }
 
   _handleMention(message) {
@@ -82,7 +82,7 @@ class CabalDetails extends EventEmitter {
   }
 
   openChannel(channel) {
-    this.currentChannel.close()
+    if (this.currentChannel) this.currentChannel.close()
     this.currentChannel = this.channels[channel]
     const unreadState = this.currentChannel.open()
     this._emitUpdate()

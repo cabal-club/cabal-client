@@ -17,7 +17,7 @@ const cabalDns = require('dat-dns')({
       if (name in config.cache) {
         var cache = config.cache[name]
         if (cache.expiresAt < Date.now()) { // if ttl has expired: warn, but keep using
-          console.error(`${chalk.redBright('Note:')} the TTL for ${name} has expired`)
+            console.log(`${chalk.redBright('Note:')} the TTL for ${name} has expired`)
         }
         return cache.key
       }
@@ -185,7 +185,6 @@ class Client {
   }
 
   getMentions(channel, cabal=this.currentCabal) {
-      console.error("get mentions")
     return this.cabals.get(cabal).getChannel(channel).getMentions()
   }
 

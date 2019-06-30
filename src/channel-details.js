@@ -55,6 +55,7 @@ class ChannelDetails {
     let mentions = this.mentions.slice() // make a copy of the array
     const resp = { newMessageCount: this.newMessageCount, lastRead: this.lastRead, mentions: mentions }
     this.newMessageCount = 0
+    this.markAsRead()
     this.mentions = []
     return resp
   }
