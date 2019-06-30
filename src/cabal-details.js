@@ -181,10 +181,18 @@ class CabalDetails extends EventEmitter {
 
   _initialize() {
     const cabal = this._cabal
+    // populate channels
     cabal.channels.get((err, channels) => {
       channels.forEach((channel) => {
-        this.channels[channel] = new ChannelDetails(cabal, channel)
-        cabal.messages.events.on(channel, this.messageListener.bind(this))
+
+        // for each channel, get the topic
+        cabal.topics.get(channel, (err, topic) => {
+            var details = new ChannelDetails(cabal, channel)
+            details.topic = topic || ''
+            // save the channel and listen for updates that happen within it
+            this.channels[channel] = details
+            cabal.messages.events.on(channel, this.messageListener.bind(this))
+        })
       })
     })
 
@@ -213,7 +221,7 @@ class CabalDetails extends EventEmitter {
       this.registerListener(cabal.topics.events, 'update', (msg) => {
           var { channel, text } = msg.value.content
           this.channels[channel].topic = text
-        this._emitUpdate()
+          this._emitUpdate()
       })
 
       this.registerListener(cabal, 'peer-added', (key) => {
