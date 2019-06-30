@@ -82,12 +82,15 @@ class CabalDetails extends EventEmitter {
     return this.channels[channel].topic || ''
   }
 
-  openChannel(channel) {
-    if (this.currentChannel) this.currentChannel.close()
+  openChannel(channel, keepUnread=false) {
+      if (this.currentChannel) {
+          // mark previous as read
+          if (!keepUnread) this.currentChannel.markAsRead()
+          this.currentChannel.close()
+      }
     this.currentChannel = this.channels[channel]
-    const unreadState = this.currentChannel.open()
+    this.currentChannel.open()
     this._emitUpdate()
-    return unreadState
   }
 
   closeChannel(channel) {
@@ -154,7 +157,7 @@ class CabalDetails extends EventEmitter {
       this._cabal.publish(joinMsg)
     }
     // we probably always want to open a joined channel?
-    return this.openChannel(channel)
+    this.openChannel(channel)
   }
 
   leaveChannel(channel) {

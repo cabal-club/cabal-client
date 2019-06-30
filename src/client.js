@@ -177,6 +177,8 @@ class Client {
   }
 
   getNumberUnreadMessages(channel, cabal=this.currentCabal) {
+    var details = this.cabals.get(cabal)
+    if (!channel) { channel = details.currentChannel.name }
     return this.cabals.get(cabal).getChannel(channel).getNewMessageCount()
   }
 
@@ -190,7 +192,7 @@ class Client {
 
   // returns { newMessageCount: <number of messages unread>, lastRead: <timestamp> }
   openChannel(channel, cabal=this.currentCabal) {
-    return this.cabals.get(cabal).openChannel(channel)
+    this.cabals.get(cabal).openChannel(channel)
   }
 
   closeChannel(channel, cabal=this.currentCabal) {
@@ -198,6 +200,8 @@ class Client {
   }
 
   markChannelRead(channel, cabal=this.currentCabal) {
+    var details = this.cabals.get(cabal)
+    if (!channel) { channel = details.currentChannel.name }
     this.cabals.get(cabal).getChannel(channel).markAsRead()
   }
 }

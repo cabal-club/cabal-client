@@ -48,16 +48,13 @@ class ChannelDetails {
 
   markAsRead() {
     this.lastRead = Date.now()
+    let mentions = this.mentions.slice() // make a copy of the array
+    this.newMessageCount = 0
+    this.mentions = []
   }
 
   open() {
     this.opened = true
-    let mentions = this.mentions.slice() // make a copy of the array
-    const resp = { newMessageCount: this.newMessageCount, lastRead: this.lastRead, mentions: mentions }
-    this.newMessageCount = 0
-    this.markAsRead()
-    this.mentions = []
-    return resp
   }
 
   // returns false if we were already in the channel, otherwise true
