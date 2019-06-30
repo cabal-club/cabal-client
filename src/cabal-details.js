@@ -25,9 +25,22 @@ class CabalDetails extends EventEmitter {
     this._initialize()
   }
 
+  _handleMention(message) {
+      if (message.value.type !== "chat/text") return null
+      let name = this.user.name || this.user.key.slice(0, 8)
+      let line = message.value.content.text.trim()
+      // a direct mention is if you're mentioned at the start of the message
+      // an indirect (or not direct) mention is if you're mentioned somewhere in the message
+      let directMention = (line.slice(0, name.length) === name)
+      message.directMention = directMention
+      return line.includes(name) ? message : null
+  }
+
   messageListener(message) {
     let channel = message.value.content.channel
+    let mention = this._handleMention(message)
     this.channels[channel].handleMessage(message)
+    if (mention) this.channels[channel].addMention(message)
     this._emitUpdate()
       // publish message up to consumer
     /* `message` is of type
@@ -97,6 +110,10 @@ class CabalDetails extends EventEmitter {
   // returns a ChannelDetails object
   getChannel(channel) {
     return this.channels[channel] || this.currentChannel
+  }
+
+  getCurrentChannel() {
+      return this.currentChannel.name
   }
 
   getJoinedChannels() {
@@ -220,7 +237,7 @@ class CabalDetails extends EventEmitter {
 
       this.registerListener(cabal.topics.events, 'update', (msg) => {
           var { channel, text } = msg.value.content
-          this.channels[channel].topic = text
+          this.channels[channel].topic = text || ''
           this._emitUpdate()
       })
 

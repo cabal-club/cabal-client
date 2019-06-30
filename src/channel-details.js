@@ -4,7 +4,7 @@ class ChannelDetails {
   constructor(cabal, channel) {
     this.name = channel
     this._cabal = cabal
-    // todo: mentionsCount / mentionsMessages
+    this.mentions = []
     this.newMessageCount = 0
     /* TODO: 
     use cursor to remember scrollback state and fetch 
@@ -18,6 +18,16 @@ class ChannelDetails {
 
   toString() {
     return this.name
+  }
+
+  addMention(mention) {
+    if (!this.opened) {
+      this.mentions.push(mention)
+    }
+  }
+
+  getMentions() {
+      return this.mentions.slice() // return copy
   }
 
   handleMessage(message) {
@@ -42,8 +52,10 @@ class ChannelDetails {
 
   open() {
     this.opened = true
-    const resp = { newMessageCount: this.newMessageCount, lastRead: this.lastRead }
+    let mentions = this.mentions.slice() // make a copy of the array
+    const resp = { newMessageCount: this.newMessageCount, lastRead: this.lastRead, mentions: mentions }
     this.newMessageCount = 0
+    this.mentions = []
     return resp
   }
 

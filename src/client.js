@@ -176,12 +176,20 @@ class Client {
     prom.then(cb)
   }
 
-  getNumberUnreadMessages(cabal=this.currentCabal, channel) {
+  getNumberUnreadMessages(channel, cabal=this.currentCabal) {
     return this.cabals.get(cabal).getChannel(channel).getNewMessageCount()
   }
 
-  // returns { newMessageCount: <number of messages unread>, lastRead: <timestamp> }
+  getNumberMentions(channel, cabal=this.currentCabal) {
+    return this.cabals.get(cabal).getChannel(channel).getMentions().length
+  }
 
+  getMentions(channel, cabal=this.currentCabal) {
+      console.error("get mentions")
+    return this.cabals.get(cabal).getChannel(channel).getMentions()
+  }
+
+  // returns { newMessageCount: <number of messages unread>, lastRead: <timestamp> }
   openChannel(channel, cabal=this.currentCabal) {
     return this.cabals.get(cabal).openChannel(channel)
   }
@@ -190,7 +198,7 @@ class Client {
     return this.cabals.get(cabal).closeChannel(channel)
   }
 
-  markChannelRead(cabal=this.currentCabal, channel) {
+  markChannelRead(channel, cabal=this.currentCabal) {
     this.cabals.get(cabal).getChannel(channel).markAsRead()
   }
 }
