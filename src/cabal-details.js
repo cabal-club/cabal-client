@@ -7,7 +7,6 @@ class CabalDetails extends EventEmitter {
     this._cabal = cabal
     this.key = cabal.key
     
-    this.joinedChannels = []
     this.pageSize = pageSize
 
     this.channels = {
@@ -71,6 +70,8 @@ class CabalDetails extends EventEmitter {
 
   publishNick(nick, cb) {
     this._cabal.publishNick(nick, cb)
+    this.user.name = nick
+    this._emitUpdate()
   }
 
   publishChannelTopic(channel, topic, cb) {
@@ -107,6 +108,11 @@ class CabalDetails extends EventEmitter {
     return Object.keys(this.channels).sort()
   }
 
+  getJoinedChannels() {
+      return Object.keys(this.channels).sort()
+          .filter((ch) => this.channels[ch].joined)
+  }
+
   // returns a ChannelDetails object
   getChannel(channel) {
     return this.channels[channel] || this.currentChannel
@@ -122,6 +128,10 @@ class CabalDetails extends EventEmitter {
 
   getLocalUser() {
     return this.user
+  }
+
+  getLocalName() {
+      return this.user.name || this.user.key.slice(0,8)
   }
   
   joinChannel(channel) {
