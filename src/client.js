@@ -170,7 +170,7 @@ class Client {
       opts = {}
     } 
     opts = opts || {}
-    if (!opts.channel) { opts.channel = details.currentChannel }
+    if (!opts.channel) { opts.channel = details.getCurrentChannel() }
     const prom = details.getChannel(opts.channel).getPage(opts.limit)
     if (!cb) { return prom }
     prom.then(cb)
@@ -178,7 +178,7 @@ class Client {
 
   getNumberUnreadMessages(channel, cabal=this.currentCabal) {
     var details = this.cabals.get(cabal)
-    if (!channel) { channel = details.currentChannel.name }
+    if (!channel) { channel = details.getCurrentChannel() }
     let count = this.cabals.get(cabal).getChannel(channel).getNewMessageCount()
       return count
   }
@@ -202,7 +202,7 @@ class Client {
 
   markChannelRead(channel, cabal=this.currentCabal) {
     var details = this.cabals.get(cabal)
-    if (!channel) { channel = details.currentChannel.name }
+    if (!channel) { channel = details.getCurrentChannel() }
     this.cabals.get(cabal).getChannel(channel).markAsRead()
   }
 }

@@ -10,8 +10,9 @@ class CabalDetails extends EventEmitter {
     this.pageSize = pageSize
 
     this.channels = {
-      'default': new ChannelDetails(this._cabal, "default") // 
+      'default': new ChannelDetails(this._cabal, "default")
     }
+    this.chname = "default"
     
     this.name = ''
     this.topic = ''
@@ -19,7 +20,7 @@ class CabalDetails extends EventEmitter {
     this.listeners = [] // keep track of listeners so we can remove them when we remove a cabal
     this.user = { local: true, online: true, key: '', name: '' }
     // make default the first channel if no saved state exists
-    this.joinChannel("default")
+    this.joinChannel(this.chname)
     this._initialize()
   }
 
@@ -38,10 +39,6 @@ class CabalDetails extends EventEmitter {
     let channel = message.value.content.channel
     let mention = this._handleMention(message)
     this.channels[channel].handleMessage(message)
-      if (channel === "default") {
-          console.error(this.currentChannel.name, this.currentChannel.opened)
-          console.error(this.channels[channel].name, this.channels[channel].opened)
-      }
     if (mention) this.channels[channel].addMention(message)
     this._emitUpdate()
   }
@@ -62,7 +59,7 @@ class CabalDetails extends EventEmitter {
   publishMessage(msg, opts, cb) {
     if (!cb) { cb = noop } 
     if (!msg.content.channel) {
-      msg.content.channel = this.currentChannel.name
+      msg.content.channel = this.chname
     }
     if (!msg.type) msg.type = "chat/text"
       this._cabal.publish(msg, opts, (err, m) => {
@@ -81,18 +78,20 @@ class CabalDetails extends EventEmitter {
     this._cabal.publishChannelTopic(channel, topic, cb)
   }
 
-  getTopic(channel=this.currentChannel.name) {
+  getTopic(channel=this.chname) {
     return this.channels[channel].topic || ''
   }
 
   openChannel(channel, keepUnread=false) {
-      if (this.currentChannel) {
+      let currentChannel = this.channels[this.chname]
+      if (currentChannel) {
           // mark previous as read
-          if (!keepUnread) this.currentChannel.markAsRead()
-          this.currentChannel.close()
+          if (!keepUnread) currentChannel.markAsRead()
+          currentChannel.close()
       }
-    this.currentChannel = this.channels[channel]
-    this.currentChannel.open()
+    this.chname = channel
+    currentChannel = this.channels[channel]
+    currentChannel.open()
     this._emitUpdate()
   }
 
@@ -121,11 +120,11 @@ class CabalDetails extends EventEmitter {
 
   // returns a ChannelDetails object
   getChannel(channel) {
-    return this.channels[channel] || this.currentChannel
+    return this.channels[channel] || this.channels[this.chname]
   }
 
   getCurrentChannel() {
-      return this.currentChannel.name
+      return this.chname
   }
 
   getJoinedChannels() {
