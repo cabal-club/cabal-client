@@ -31,6 +31,7 @@ class ChannelDetails {
   }
 
   handleMessage(message) {
+      if (this.name === "default") { console.error("def", this.opened) }
     if (!this.opened) {
       // ++var is an optimization:
       // var++ creates a temporary variable while ++var doesn't
@@ -38,10 +39,6 @@ class ChannelDetails {
     }
   }
   
-  close() {
-    this.opened = false
-  }
-
   getNewMessageCount() {
     return this.newMessageCount
   }
@@ -56,6 +53,11 @@ class ChannelDetails {
   open() {
     this.opened = true
   }
+
+  close() {
+    this.opened = false
+  }
+
 
   // returns false if we were already in the channel, otherwise true
   join() {

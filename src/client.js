@@ -179,7 +179,8 @@ class Client {
   getNumberUnreadMessages(channel, cabal=this.currentCabal) {
     var details = this.cabals.get(cabal)
     if (!channel) { channel = details.currentChannel.name }
-    return this.cabals.get(cabal).getChannel(channel).getNewMessageCount()
+    let count = this.cabals.get(cabal).getChannel(channel).getNewMessageCount()
+      return count
   }
 
   getNumberMentions(channel, cabal=this.currentCabal) {

@@ -10,7 +10,6 @@ class CabalDetails extends EventEmitter {
     this.pageSize = pageSize
 
     this.channels = {
-      // '!status': new ChannelDetails() // ???: what does this need?
       'default': new ChannelDetails(this._cabal, "default") // 
     }
     
@@ -19,9 +18,9 @@ class CabalDetails extends EventEmitter {
     this.users = {} // public keys -> cabal-core user?
     this.listeners = [] // keep track of listeners so we can remove them when we remove a cabal
     this.user = { local: true, online: true, key: '', name: '' }
-    this._initialize()
     // make default the first channel if no saved state exists
     this.joinChannel("default")
+    this._initialize()
   }
 
   _handleMention(message) {
@@ -39,23 +38,27 @@ class CabalDetails extends EventEmitter {
     let channel = message.value.content.channel
     let mention = this._handleMention(message)
     this.channels[channel].handleMessage(message)
+      if (channel === "default") {
+          console.error(this.currentChannel.name, this.currentChannel.opened)
+          console.error(this.channels[channel].name, this.channels[channel].opened)
+      }
     if (mention) this.channels[channel].addMention(message)
     this._emitUpdate()
-      // publish message up to consumer
-    /* `message` is of type
-    { 
-      key: '<peer public key>',
-      seq: 454,
-      value:
-        { 
-          content: { channel: 'testing', text: 'umm well' },
-          type: 'chat/text',
-          timestamp: 1560999208134 
-        } 
-    }
-    */
   }
 
+   // publish message up to consumer
+   /* `message` is of type
+   { 
+     key: '<peer public key>',
+     seq: 454,
+     value:
+       { 
+         content: { channel: 'testing', text: 'umm well' },
+         type: 'chat/text',
+         timestamp: 1560999208134 
+       } 
+   }
+   */
   publishMessage(msg, opts, cb) {
     if (!cb) { cb = noop } 
     if (!msg.content.channel) {
