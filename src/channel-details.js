@@ -31,7 +31,6 @@ class ChannelDetails {
   }
 
   handleMessage(message) {
-      if (this.name === "default") { console.error("def", this.opened) }
     if (!this.opened) {
       // ++var is an optimization:
       // var++ creates a temporary variable while ++var doesn't
@@ -73,14 +72,17 @@ class ChannelDetails {
     return joined
   }
 
-  getPage(limit = -1, lastTimestamp = Date.now()) {
+  getPage(opts) {
+    opts = opts || {}
+    opts.limit = opts.limit || -1
+    opts.lt = opts.lt || Date.now()
+    opts.gt = opts.gt || 0
     return new Promise((resolve, reject) => {
-      const rs = this._cabal.messages.read(this.name, { limit, lt: lastTimestamp })
+      const rs = this._cabal.messages.read(this.name, opts)
       collect(rs, (err, msgs) => {
         if (err) {
           return reject(err)
         }
-
         resolve(msgs.reverse())
       })
     }) 
