@@ -74,9 +74,9 @@ class ChannelDetails {
 
   getPage(opts) {
     opts = opts || {}
-    opts.limit = opts.limit || -1
-    opts.lt = opts.lt || Date.now()
-    opts.gt = opts.gt || 0
+    // opts.limit = opts.limit || -1
+    // opts.lt = opts.lt || Date.now()
+    // opts.gt = opts.gt || 0
     return new Promise((resolve, reject) => {
       const rs = this._cabal.messages.read(this.name, opts)
       collect(rs, (err, msgs) => {

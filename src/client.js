@@ -170,9 +170,10 @@ class Client {
       opts = {}
     } 
     opts = opts || {}
-    var pageOpts = { lt: opts.olderThan, gt: opts.newerThan, limit: opts.amount }
-      console.error(pageOpts)
-      console.error("lt:", new Date(pageOpts.lt).toISOString())
+    var pageOpts = {}
+    if (opts.olderThan) pageOpts.lt = opts.olderThan - 1
+    if (opts.newerThan) pageOpts.gt = opts.newerThan - 1
+    if (opts.amount) pageOpts.limit = opts.amount
     if (!opts.channel) { opts.channel = details.getCurrentChannel() }
     const prom = details.getChannel(opts.channel).getPage(pageOpts)
     if (!cb) { return prom }
