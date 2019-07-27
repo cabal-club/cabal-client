@@ -2,13 +2,11 @@ const EventEmitter = require('events')
 const ChannelDetails = require("./channel-details")
 
 class CabalDetails extends EventEmitter {
-  constructor(cabal, pageSize) {
+  constructor(cabal) {
     super()
     this._cabal = cabal
     this.key = cabal.key
     
-    this.pageSize = pageSize
-
     this.channels = {
       'default': new ChannelDetails(this._cabal, "default")
     }
@@ -83,6 +81,7 @@ class CabalDetails extends EventEmitter {
   }
 
   openChannel(channel, keepUnread=false) {
+      if (!channel) channel = this.chname
       let currentChannel = this.channels[this.chname]
       if (currentChannel) {
           // mark previous as read

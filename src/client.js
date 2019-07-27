@@ -5,6 +5,7 @@ const ram = require('random-access-memory')
 const memdb = require('memdb')
 const level = require('level')
 const path = require('path')
+const mkdirp = require("mkdirp")
 
 /*
 const cabalDns = require('dat-dns')({
@@ -34,36 +35,35 @@ const cabalDns = require('dat-dns')({
 })
 */
 class Client {
-  constructor(opts) {
+  constructor (opts) {
     if (!(this instanceof Client)) return new Client(opts)
     // This is redundant, but we might want to keep the cabal map around
     // in the case the user has access to cabal instances
     this._keyToCabal = {}
     // maps a cabal-core instance to a CabalDetails object
-    this.cabals = new Map() 
+    this.cabals = new Map()
     this.currentCabal = null
     this.config = opts.config
     this.maxFeeds = opts.maxFeeds || 1000
-    this.pageSize = opts.pageSize || 100
   }
 
-  static getDatabaseVersion() {
+  static getDatabaseVersion () {
     return Cabal.databaseVersion
   }
-  
-  static scrub(key) {
+
+  static scrub (key) {
     return key.replace('cabal://', '').replace('cbl://', '').replace('dat://', '').replace(/\//g, '')
   }
 
-  createCabal() {
+  createCabal () {
     return this.addCabal(crypto.keyPair().publicKey.toString('hex'))
   }
 
-  addCabal(key) {
+  addCabal (key) {
     return new Promise((resolve, reject) => {
       var cabal
       // error states?
-      if (typeof key === "string") {
+      if (typeof key === 'string') {
         key = Client.scrub(key)
         const {temp, dbdir} = this.config
         const storage = temp ? ram : dbdir + key
@@ -82,9 +82,10 @@ class Client {
       }
 
       cabal.ready(() => {
-        const details = new CabalDetails(cabal, this.pageSize)
+        const details = new CabalDetails(cabal)
         this.cabals.set(cabal, details)
         cabal.swarm()
+        this.getCurrentCabal()._emitUpdate()
         resolve(details)
       })
     })
@@ -99,7 +100,7 @@ class Client {
     return this.cabalToDetails(cabal)
   }
 
-  removeCabal(key) {
+  removeCabal (key) {
     const cabal = this._coerceToCabal(key)
     if (!cabal) {
       return false
@@ -113,98 +114,99 @@ class Client {
     return this.cabals.delete(cabal)
   }
 
-  getCabalKeys() {
+  getCabalKeys () {
     return Object.keys(this._keyToCabal) // ???: sorted?
   }
 
   getCurrentCabal () {
-      return this.cabalToDetails(this.currentCabal)
+    return this.cabalToDetails(this.currentCabal)
   }
 
-  getCabalByKey(key) {
+  getCabalByKey (key) {
     if (!key) {
       return this.currentCabal
     }
     return this._keyToCabal[key]
   }
 
-  cabalToDetails(cabal=this.currentCabal) {
+  cabalToDetails (cabal = this.currentCabal) {
     return this.cabals.get(cabal)
   }
 
-  connect(cabal=this.currentCabal) {
-    cabal.ready(cabal.swarm) 
+  connect (cabal = this.currentCabal) {
+    cabal.ready(cabal.swarm)
   }
 
-  getUsers(cabal=this.currentCabal) {
+  getUsers (cabal = this.currentCabal) {
     return this.cabals.get(cabal).getUsers()
   }
 
-  getJoinedChannels(cabal=this.currentCabal) {
+  getJoinedChannels (cabal = this.currentCabal) {
     return this.cabals.get(cabal).getJoinedChannels()
   }
 
-  getChannels(cabal=this.currentCabal) {
+  getChannels (cabal = this.currentCabal) {
     return this.cabals.get(cabal).getChannels()
   }
 
-  _coerceToCabal(key) {
+  _coerceToCabal (key) {
     if (key instanceof Cabal) {
       return key
     }
     return this._keyToCabal[key]
   }
 
-  subscribe(cabal=this.currentCabal, listener) {
+  subscribe (cabal = this.currentCabal, listener) {
     this.cabals.get(cabal).on('update', listener)
   }
 
-  unsubscribe(cabal=this.currentCabal, listener) {
+  unsubscribe (cabal = this.currentCabal, listener) {
     this.cabals.get(cabal).removeListener('update', listener)
   }
 
-  getMessages(opts, cb, cabal=this.currentCabal) {
+  getMessages (opts, cb, cabal = this.currentCabal) {
     var details = this.cabals.get(cabal)
     if (typeof opts === 'function') {
       cb = opts
       opts = {}
-    } 
+    }
     opts = opts || {}
     var pageOpts = {}
-    if (opts.olderThan) pageOpts.lt = opts.olderThan - 1
-    if (opts.newerThan) pageOpts.gt = opts.newerThan - 1
-    if (opts.amount) pageOpts.limit = opts.amount
+    if (opts.olderThan) pageOpts.lt = parseInt(opts.olderThan) - 1 // - 1 because leveldb.lt seems to include the value we send it?
+    if (opts.newerThan) pageOpts.gt = parseInt(opts.newerThan) // if you fix the -1 hack above, make sure that backscroll in cabal-cli works
+    if (opts.amount) pageOpts.limit = parseInt(opts.amount)
     if (!opts.channel) { opts.channel = details.getCurrentChannel() }
     const prom = details.getChannel(opts.channel).getPage(pageOpts)
     if (!cb) { return prom }
     prom.then(cb)
   }
 
-  getNumberUnreadMessages(channel, cabal=this.currentCabal) {
+  getNumberUnreadMessages (channel, cabal = this.currentCabal) {
     var details = this.cabals.get(cabal)
     if (!channel) { channel = details.getCurrentChannel() }
     let count = this.cabals.get(cabal).getChannel(channel).getNewMessageCount()
-      return count
+    return count
   }
 
-  getNumberMentions(channel, cabal=this.currentCabal) {
+  getNumberMentions (channel, cabal = this.currentCabal) {
     return this.cabals.get(cabal).getChannel(channel).getMentions().length
   }
 
-  getMentions(channel, cabal=this.currentCabal) {
+  getMentions (channel, cabal = this.currentCabal) {
     return this.cabals.get(cabal).getChannel(channel).getMentions()
   }
 
   // returns { newMessageCount: <number of messages unread>, lastRead: <timestamp> }
-  openChannel(channel, cabal=this.currentCabal) {
+  openChannel (channel, cabal = this.currentCabal) {
     this.cabals.get(cabal).openChannel(channel)
+    var details = this.cabals.get(cabal)._emitUpdate()
   }
 
-  closeChannel(channel, cabal=this.currentCabal) {
+  closeChannel (channel, cabal = this.currentCabal) {
     return this.cabals.get(cabal).closeChannel(channel)
   }
 
-  markChannelRead(channel, cabal=this.currentCabal) {
+  markChannelRead (channel, cabal = this.currentCabal) {
     var details = this.cabals.get(cabal)
     if (!channel) { channel = details.getCurrentChannel() }
     this.cabals.get(cabal).getChannel(channel).markAsRead()
