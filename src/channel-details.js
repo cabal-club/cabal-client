@@ -1,9 +1,9 @@
 const collect = require('collect-stream')
 
-class ChannelDetails {
-  constructor(cabal, channel) {
-    this.name = channel
-    this._cabal = cabal
+class ChannelDetailsBase {
+  constructor(channelName) {
+    this.name = channelName
+
     this.mentions = []
     this.newMessageCount = 0
     /* TODO: 
@@ -27,7 +27,7 @@ class ChannelDetails {
   }
 
   getMentions() {
-      return this.mentions.slice() // return copy
+    return this.mentions.slice() // return copy
   }
 
   handleMessage(message) {
@@ -44,7 +44,6 @@ class ChannelDetails {
 
   markAsRead() {
     this.lastRead = Date.now()
-    let mentions = this.mentions.slice() // make a copy of the array
     this.newMessageCount = 0
     this.mentions = []
   }
@@ -57,6 +56,9 @@ class ChannelDetails {
     this.opened = false
   }
 
+  // stub method for consistency's sake. virtual channels are locally managed, but normal channels
+  // query their messages out of the cabal every time.
+  addMessage() {}
 
   // returns false if we were already in the channel, otherwise true
   join() {
@@ -71,6 +73,13 @@ class ChannelDetails {
     this.joined = false
     return joined
   }
+}
+
+class ChannelDetails extends ChannelDetailsBase {
+  constructor(cabal, channelName) {
+    super(channelName)
+    this.messages = cabal.messages
+  }
 
   getPage(opts) {
     opts = opts || {}
@@ -78,7 +87,7 @@ class ChannelDetails {
     // opts.lt = opts.lt || Date.now()
     // opts.gt = opts.gt || 0
     return new Promise((resolve, reject) => {
-      const rs = this._cabal.messages.read(this.name, opts)
+      const rs = this.messages.read(this.name, opts)
       collect(rs, (err, msgs) => {
         if (err) {
           return reject(err)
@@ -89,4 +98,53 @@ class ChannelDetails {
   }
 }
 
-module.exports = ChannelDetails
+class VirtualChannelDetails extends ChannelDetailsBase {
+  constructor(channelName) {
+    super(channelName)
+    this.messages = []
+  }
+
+  getPage(opts) {
+    const newerThan = opts.gt || 0
+    const olderThan = opts.lt || Infinity
+    return Promise.resolve(this.messages.filter((m) => {
+      return (m.value.timestamp > newerThan && m.value.timestamp < olderThan)
+    }).slice(-opts.limit))
+  }
+
+  /*
+  addMessage({ timestamp: Date.now(), type: "status", text: "" }})
+  */
+  addMessage(msg) {
+   /*
+   msg will be on the format of
+   {timestamp, type, text} 
+   but we convert it to the format that cabal expects messages to conform to 
+    msg = {
+      key: ''
+      value: {
+        timestamp: ''
+        type: ''
+        content: {
+          text: ''
+        }
+      }
+    }
+    */
+    if (!msg.value) {
+      msg = {
+        key: this.name,
+        value: {
+          timestamp: msg.timestamp || Date.now(),
+          type: msg.type || "status",
+          content: {
+            text: msg.text
+          }
+        }
+      }
+    }
+    this.messages.push(msg)
+  }
+}
+
+module.exports = { ChannelDetails, VirtualChannelDetails }

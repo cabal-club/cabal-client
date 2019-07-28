@@ -1,5 +1,5 @@
 const EventEmitter = require('events')
-const ChannelDetails = require("./channel-details")
+const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
 
 class CabalDetails extends EventEmitter {
   constructor(cabal) {
@@ -8,6 +8,7 @@ class CabalDetails extends EventEmitter {
     this.key = cabal.key
     
     this.channels = {
+      '!status': new VirtualChannelDetails("!status"),
       'default': new ChannelDetails(this._cabal, "default")
     }
     this.chname = "default"
@@ -106,6 +107,10 @@ class CabalDetails extends EventEmitter {
       var newChannel = joined[newIndex]
       this.openChannel(newChannel) // will this cause weird behaviour?
     }
+  }
+
+  addStatusMessage(message) {
+    this.channels['!status'].addMessage(message)
   }
 
   getChannels() {

@@ -106,7 +106,7 @@ class Client {
       return false
     }
 
-    const details = this.cabals.get(cabal)
+    const details = this.cabalToDetails(cabal)
     details._destroy()
 
     // burn everything we know about the cabal
@@ -130,23 +130,31 @@ class Client {
   }
 
   cabalToDetails (cabal = this.currentCabal) {
-    return this.cabals.get(cabal)
+    const details = this.cabals.get(cabal)
+    if (details) {
+      return details
+    }
+    throw new Error('Could not resolve cabal to details, did ya pass in a cabal instance?')
   }
 
   connect (cabal = this.currentCabal) {
     cabal.ready(cabal.swarm)
   }
 
+  addStatusMessage (message, cabal = this.currentCabal) {
+    this.cabalToDetails(cabal).addStatusMessage(message)
+  }
+
   getUsers (cabal = this.currentCabal) {
-    return this.cabals.get(cabal).getUsers()
+    return this.cabalToDetails(cabal).getUsers()
   }
 
   getJoinedChannels (cabal = this.currentCabal) {
-    return this.cabals.get(cabal).getJoinedChannels()
+    return this.cabalToDetails(cabal).getJoinedChannels()
   }
 
   getChannels (cabal = this.currentCabal) {
-    return this.cabals.get(cabal).getChannels()
+    return this.cabalToDetails(cabal).getChannels()
   }
 
   _coerceToCabal (key) {
@@ -157,15 +165,15 @@ class Client {
   }
 
   subscribe (cabal = this.currentCabal, listener) {
-    this.cabals.get(cabal).on('update', listener)
+    this.cabalToDetails(cabal).on('update', listener)
   }
 
   unsubscribe (cabal = this.currentCabal, listener) {
-    this.cabals.get(cabal).removeListener('update', listener)
+    this.cabalToDetails(cabal).removeListener('update', listener)
   }
 
   getMessages (opts, cb, cabal = this.currentCabal) {
-    var details = this.cabals.get(cabal)
+    var details = this.cabalToDetails(cabal)
     if (typeof opts === 'function') {
       cb = opts
       opts = {}
@@ -182,34 +190,34 @@ class Client {
   }
 
   getNumberUnreadMessages (channel, cabal = this.currentCabal) {
-    var details = this.cabals.get(cabal)
+    var details = this.cabalToDetails(cabal)
     if (!channel) { channel = details.getCurrentChannel() }
-    let count = this.cabals.get(cabal).getChannel(channel).getNewMessageCount()
+    let count = this.cabalToDetails(cabal).getChannel(channel).getNewMessageCount()
     return count
   }
 
   getNumberMentions (channel, cabal = this.currentCabal) {
-    return this.cabals.get(cabal).getChannel(channel).getMentions().length
+    return this.cabalToDetails(cabal).getChannel(channel).getMentions().length
   }
 
   getMentions (channel, cabal = this.currentCabal) {
-    return this.cabals.get(cabal).getChannel(channel).getMentions()
+    return this.cabalToDetails(cabal).getChannel(channel).getMentions()
   }
 
   // returns { newMessageCount: <number of messages unread>, lastRead: <timestamp> }
   openChannel (channel, cabal = this.currentCabal) {
-    this.cabals.get(cabal).openChannel(channel)
-    var details = this.cabals.get(cabal)._emitUpdate()
+    this.cabalToDetails(cabal).openChannel(channel)
+    var details = this.cabalToDetails(cabal)._emitUpdate()
   }
 
   closeChannel (channel, cabal = this.currentCabal) {
-    return this.cabals.get(cabal).closeChannel(channel)
+    return this.cabalToDetails(cabal).closeChannel(channel)
   }
 
   markChannelRead (channel, cabal = this.currentCabal) {
-    var details = this.cabals.get(cabal)
+    var details = this.cabalToDetails(cabal)
     if (!channel) { channel = details.getCurrentChannel() }
-    this.cabals.get(cabal).getChannel(channel).markAsRead()
+    this.cabalToDetails(cabal).getChannel(channel).markAsRead()
   }
 }
 
