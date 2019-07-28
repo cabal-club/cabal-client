@@ -214,6 +214,10 @@ class Client {
     return this.cabalToDetails(cabal).closeChannel(channel)
   }
 
+  getCurrentChannel () {
+    return this.cabalToDetails(this.currentCabal).getCurrentChannel()
+  }
+
   markChannelRead (channel, cabal = this.currentCabal) {
     var details = this.cabalToDetails(cabal)
     if (!channel) { channel = details.getCurrentChannel() }

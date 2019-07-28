@@ -1,4 +1,5 @@
 const collect = require('collect-stream')
+const { stableSort, merge } = require('./util')
 
 class ChannelDetailsBase {
   constructor(channelName) {
@@ -7,6 +8,7 @@ class ChannelDetailsBase {
     this.mentions = []
     this.virtualMessages = []
     this.newMessageCount = 0
+    this.datesSeen = new Set()
     /* TODO: 
     use cursor to remember scrollback state and fetch 
     from leveldb.  
@@ -61,44 +63,17 @@ class ChannelDetailsBase {
     const limit = opts.limit
     const newerThan = opts.gt || 0
     const olderThan = opts.lt || Infinity
-    return this.virtualMessages.filter((m) => {
+    return stableSort(this.virtualMessages.filter((m) => {
       return (m.value.timestamp > newerThan && m.value.timestamp < olderThan)
-    }).sort((a, b) => a.value.timestamp - b.value.timestamp).slice(-limit)
+    }), v => v.value.timestamp).slice(-limit)
   }
 
   interleaveVirtualMessages(messages, opts) {
     const virtualMessages = this.getVirtualMessages(opts)
-
-    if (virtualMessages.length === 0) {
-      return messages
-    }
-    if (messages.length === 0) {
-      return virtualMessages
-    }
-
     const limit = opts.limit
-    const res = []
-    let index = 0
-    let virtualIndex = 0
-    while (index < messages.length && virtualIndex < virtualMessages.length) {
-      const v = virtualMessages[virtualIndex]
-      const m = messages[index]
-      if (v.value.timestamp <= m.value.timestamp) {
-        res.push(v)
-        ++virtualIndex
-      } else {
-        res.push(m)
-        ++index
-      }
-    }
-    // push the remaining messages from the incompleted buffer into the result buffer
-    if (index === messages.length) {
-      res.push(...virtualMessages.slice(virtualIndex))
-    } else {
-      res.push(...messages.slice(index))
-    }
-    return res.slice(-limit)
+    return merge(virtualMessages, messages, v => v.value.timestamp).slice(-limit)
   }
+
   /*
   addMessage({ timestamp: Date.now(), type: "status", text: "" }})
   */
@@ -147,6 +122,18 @@ class ChannelDetailsBase {
     return joined
   }
 }
+/*
+msg = {
+  key: '' // dunno
+  value: {
+    timestamp: '' // dunno
+    type: 'status/date-change'
+    content: {
+      time: '<epochtime>'
+    }
+  }
+}
+*/
 
 class ChannelDetails extends ChannelDetailsBase {
   constructor(cabal, channelName) {
@@ -163,7 +150,24 @@ class ChannelDetails extends ChannelDetailsBase {
         if (err) {
           return reject(err)
         }
-        resolve(this.interleaveVirtualMessages(msgs.reverse(), OGopts))
+        const reversed = []
+        for (let i = msgs.length - 1; i >= 0; --i) {
+          const msg = msgs[i]
+          reversed.push(msg)
+          const msgTime = msg.value.timestamp
+          const dayTimestamp = msgTime - (msgTime % (24*60*60*1000))
+          if (!this.datesSeen.has(dayTimestamp)) {
+            this.datesSeen.add(dayTimestamp)
+            this.addMessage({
+              key: this.name,
+              value: {
+                timestamp: dayTimestamp,
+                type: 'status/date-changed'
+              }
+            })
+          }
+        }
+        resolve(this.interleaveVirtualMessages(reversed, OGopts))
       })
     }) 
   }
