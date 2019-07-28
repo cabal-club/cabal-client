@@ -63,7 +63,7 @@ class ChannelDetailsBase {
     const olderThan = opts.lt || Infinity
     return this.virtualMessages.filter((m) => {
       return (m.value.timestamp > newerThan && m.value.timestamp < olderThan)
-    }).slice(-limit)
+    }).sort((a, b) => a.value.timestamp - b.value.timestamp).slice(-limit)
   }
 
   interleaveVirtualMessages(messages, opts) {

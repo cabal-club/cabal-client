@@ -9,7 +9,7 @@ class CabalDetails extends EventEmitter {
     
     this.channels = {
       '!status': new VirtualChannelDetails("!status"),
-      'default': new ChannelDetails(this._cabal, "default")
+      'default': new ChannelDetails(this._cabal, 'default')
     }
     this.chname = "default"
     
@@ -224,7 +224,10 @@ class CabalDetails extends EventEmitter {
 
         // for each channel, get the topic
         cabal.topics.get(channel, (err, topic) => {
-            var details = new ChannelDetails(cabal, channel)
+            let details = this.channels[channel]
+            if (!details) {
+              details = new ChannelDetails(cabal, channel)
+            }
             details.topic = topic || ''
             // save the channel and listen for updates that happen within it
             this.channels[channel] = details
