@@ -57,37 +57,45 @@ class ChannelDetailsBase {
     this.opened = false
   }
 
-  interleaveVirtualMessages(messages, opts) {
+  getVirtualMessages(opts) {
     const limit = opts.limit
     const newerThan = opts.gt || 0
     const olderThan = opts.lt || Infinity
-    const virtualMessages = this.virtualMessages.filter((m) => {
+    return this.virtualMessages.filter((m) => {
       return (m.value.timestamp > newerThan && m.value.timestamp < olderThan)
-    })
+    }).slice(-limit)
+  }
+
+  interleaveVirtualMessages(messages, opts) {
+    const virtualMessages = this.getVirtualMessages(opts)
 
     if (virtualMessages.length === 0) {
       return messages
     }
+    if (messages.length === 0) {
+      return virtualMessages
+    }
 
+    const limit = opts.limit
     const res = []
     let index = 0
     let virtualIndex = 0
-    while (res.length < limit && index < messages.length && virtualIndex < virtualMessages.length) {
-      if (virtualMessages[virtualIndex].value.timestamp <= messages[index].value.timestamp) {
-        res.push(this.virtualMessages[virtualIndex++])
+    while (index < messages.length && virtualIndex < virtualMessages.length) {
+      const v = virtualMessages[virtualIndex]
+      const m = messages[index]
+      if (v.value.timestamp <= m.value.timestamp) {
+        res.push(v)
+        ++virtualIndex
       } else {
-        res.push(messages[index++])
+        res.push(m)
+        ++index
       }
-    }
-
-    if (res.length === limit) {
-      return res
     }
     // push the remaining messages from the incompleted buffer into the result buffer
     if (index === messages.length) {
-      Array.prototype.push.apply(res, virtualMessages.slice(virtualIndex))
+      res.push(...virtualMessages.slice(virtualIndex))
     } else {
-      Array.prototype.push.apply(res, messages.slice(index))
+      res.push(...messages.slice(index))
     }
     return res.slice(-limit)
   }
@@ -148,16 +156,14 @@ class ChannelDetails extends ChannelDetailsBase {
 
   getPage(opts) {
     opts = opts || {}
-    // opts.limit = opts.limit || -1
-    // opts.lt = opts.lt || Date.now()
-    // opts.gt = opts.gt || 0
+    const OGopts = Object.assign({}, opts)
     return new Promise((resolve, reject) => {
       const rs = this.messages.read(this.name, opts)
       collect(rs, (err, msgs) => {
         if (err) {
           return reject(err)
         }
-        resolve(this.interleaveVirtualMessages(msgs.reverse(), opts.limit))
+        resolve(this.interleaveVirtualMessages(msgs.reverse(), OGopts))
       })
     }) 
   }
@@ -169,11 +175,7 @@ class VirtualChannelDetails extends ChannelDetailsBase {
   }
 
   getPage(opts) {
-    const newerThan = opts.gt || 0
-    const olderThan = opts.lt || Infinity
-    return Promise.resolve(this.virtualMessages.filter((m) => {
-      return (m.value.timestamp > newerThan && m.value.timestamp < olderThan)
-    }).slice(-opts.limit))
+    return Promise.resolve(this.getVirtualMessages(opts))
   }
 }
 

@@ -110,7 +110,7 @@ class CabalDetails extends EventEmitter {
   }
 
   addStatusMessage(message) {
-    this.channels['!status'].addMessage(message)
+    this.channels[this.chname].addMessage(message)
     this._emitUpdate()
   }
 
