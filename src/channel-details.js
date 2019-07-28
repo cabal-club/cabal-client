@@ -5,6 +5,7 @@ class ChannelDetailsBase {
     this.name = channelName
 
     this.mentions = []
+    this.virtualMessages = []
     this.newMessageCount = 0
     /* TODO: 
     use cursor to remember scrollback state and fetch 
@@ -56,9 +57,73 @@ class ChannelDetailsBase {
     this.opened = false
   }
 
-  // stub method for consistency's sake. virtual channels are locally managed, but normal channels
-  // query their messages out of the cabal every time.
-  addMessage() {}
+  interleaveVirtualMessages(messages, opts) {
+    const limit = opts.limit
+    const newerThan = opts.gt || 0
+    const olderThan = opts.lt || Infinity
+    const virtualMessages = this.virtualMessages.filter((m) => {
+      return (m.value.timestamp > newerThan && m.value.timestamp < olderThan)
+    })
+
+    if (virtualMessages.length === 0) {
+      return messages
+    }
+
+    const res = []
+    let index = 0
+    let virtualIndex = 0
+    while (res.length < limit && index < messages.length && virtualIndex < virtualMessages.length) {
+      if (virtualMessages[virtualIndex].value.timestamp <= messages[index].value.timestamp) {
+        res.push(this.virtualMessages[virtualIndex++])
+      } else {
+        res.push(messages[index++])
+      }
+    }
+
+    if (res.length === limit) {
+      return res
+    }
+    // push the remaining messages from the incompleted buffer into the result buffer
+    if (index === messages.length) {
+      Array.prototype.push.apply(res, virtualMessages.slice(virtualIndex))
+    } else {
+      Array.prototype.push.apply(res, messages.slice(index))
+    }
+    return res.slice(-limit)
+  }
+  /*
+  addMessage({ timestamp: Date.now(), type: "status", text: "" }})
+  */
+  addMessage(msg) {
+    /*
+    msg will be on the format of
+    {timestamp, type, text} 
+    but we convert it to the format that cabal expects messages to conform to 
+     msg = {
+       key: ''
+       value: {
+         timestamp: ''
+         type: ''
+         content: {
+           text: ''
+         }
+       }
+     }
+     */
+     if (!msg.value) {
+       msg = {
+         key: this.name,
+         value: {
+           timestamp: msg.timestamp || Date.now(),
+           type: msg.type || "status",
+           content: {
+             text: msg.text
+           }
+         }
+       }
+     }
+     this.virtualMessages.push(msg)
+   }
 
   // returns false if we were already in the channel, otherwise true
   join() {
@@ -92,7 +157,7 @@ class ChannelDetails extends ChannelDetailsBase {
         if (err) {
           return reject(err)
         }
-        resolve(msgs.reverse())
+        resolve(this.interleaveVirtualMessages(msgs.reverse(), opts.limit))
       })
     }) 
   }
@@ -101,49 +166,14 @@ class ChannelDetails extends ChannelDetailsBase {
 class VirtualChannelDetails extends ChannelDetailsBase {
   constructor(channelName) {
     super(channelName)
-    this.messages = []
   }
 
   getPage(opts) {
     const newerThan = opts.gt || 0
     const olderThan = opts.lt || Infinity
-    return Promise.resolve(this.messages.filter((m) => {
+    return Promise.resolve(this.virtualMessages.filter((m) => {
       return (m.value.timestamp > newerThan && m.value.timestamp < olderThan)
     }).slice(-opts.limit))
-  }
-
-  /*
-  addMessage({ timestamp: Date.now(), type: "status", text: "" }})
-  */
-  addMessage(msg) {
-   /*
-   msg will be on the format of
-   {timestamp, type, text} 
-   but we convert it to the format that cabal expects messages to conform to 
-    msg = {
-      key: ''
-      value: {
-        timestamp: ''
-        type: ''
-        content: {
-          text: ''
-        }
-      }
-    }
-    */
-    if (!msg.value) {
-      msg = {
-        key: this.name,
-        value: {
-          timestamp: msg.timestamp || Date.now(),
-          type: msg.type || "status",
-          content: {
-            text: msg.text
-          }
-        }
-      }
-    }
-    this.messages.push(msg)
   }
 }
 
