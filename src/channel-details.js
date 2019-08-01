@@ -5,6 +5,7 @@ class ChannelDetailsBase {
   constructor(channelName) {
     this.name = channelName
 
+    this.members = new Set()
     this.mentions = []
     this.virtualMessages = []
     this.newMessageCount = 0
@@ -21,6 +22,18 @@ class ChannelDetailsBase {
 
   toString() {
     return this.name
+  }
+
+  addMember (key) {
+    this.members.add(key)
+  }
+
+  removeMember(key) {
+    this.members.delete(key)
+  }
+
+  getMembers () {
+    return Array.from(this.members)
   }
 
   addMention(mention) {
@@ -181,6 +194,7 @@ class ChannelDetails extends ChannelDetailsBase {
 class VirtualChannelDetails extends ChannelDetailsBase {
   constructor(channelName) {
     super(channelName)
+    this.joined = true
   }
 
   getPage(opts) {

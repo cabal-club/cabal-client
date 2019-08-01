@@ -9,17 +9,14 @@ class CabalDetails extends EventEmitter {
     
     this.channels = {
       '!status': new VirtualChannelDetails("!status"),
-      'default': new ChannelDetails(this._cabal, 'default')
     }
-    this.chname = "default"
+    this.chname = "!status"
     
     this.name = ''
     this.topic = ''
     this.users = {} // public keys -> cabal-core user?
     this.listeners = [] // keep track of listeners so we can remove them when we remove a cabal
     this.user = { local: true, online: true, key: '', name: '' }
-    // make default the first channel if no saved state exists
-    this.joinChannel(this.chname)
     this._initialize()
   }
 
@@ -73,7 +70,7 @@ class CabalDetails extends EventEmitter {
     this._emitUpdate()
   }
 
-  publishChannelTopic(channel, topic, cb) {
+  publishChannelTopic(channel=this.chname, topic, cb) {
     this._cabal.publishChannelTopic(channel, topic, cb)
   }
 
@@ -81,36 +78,33 @@ class CabalDetails extends EventEmitter {
     return this.channels[channel].topic || ''
   }
 
-  openChannel(channel, keepUnread=false) {
-      if (!channel) channel = this.chname
-      let currentChannel = this.channels[this.chname]
-      if (currentChannel) {
-          // mark previous as read
-          if (!keepUnread) currentChannel.markAsRead()
-          currentChannel.close()
-      }
+  getChannelMembers(channel=this.chname) {
+    var details = this.channels[channel]
+    if (!details) return []
+    if (channel === "!status") return this.getUsers()
+    return details.getMembers().map((ukey) => this.users[ukey]).filter((u) => u)
+  }
+
+  openChannel(channel=this.chname, keepUnread=false) {
+    let currentChannel = this.channels[this.chname]
+    if (currentChannel) {
+      // mark previous as read
+      if (!keepUnread) currentChannel.markAsRead()
+      currentChannel.close()
+    }
     this.chname = channel
     currentChannel = this.channels[channel]
     currentChannel.open()
     this._emitUpdate()
   }
 
-  closeChannel(channel) {
-    var joined = this.getJoinedChannels()
+  closeChannel(channel=this.chname, newChannel) {
     this.channels[channel].close()
-    var index = joined.indexOf(channel)
-    // open the channel before this one
-    if (joined.length > 1) {
-      var newIndex 
-      if (index === 0) { newIndex = joined.length - 1}
-      else { newIndex = index - 1 }
-      var newChannel = joined[newIndex]
-      this.openChannel(newChannel) // will this cause weird behaviour?
-    }
+    // open a new channel after closing `channel`
+    if (newChannel) this.openChannel(newChannel)
   }
 
-  addStatusMessage(message, channel) {
-    if (!channel) channel = this.chname
+  addStatusMessage(message, channel=this.chname) {
     this.channels[channel].addMessage(message)
     this._emitUpdate()
   }
@@ -120,13 +114,19 @@ class CabalDetails extends EventEmitter {
   }
 
   getJoinedChannels() {
-      return Object.keys(this.channels).sort()
-          .filter((ch) => this.channels[ch].joined)
+    return Object.keys(this.channels).sort()
+      .filter((ch) => this.channels[ch].joined)
+  }
+
+  getJoinedUsers (channel=this.chname) {
+    var details = this.channels[channel]
+    if (!details) return []
+    return details.getMembers()
   }
 
   // returns a ChannelDetails object
-  getChannel(channel) {
-    return this.channels[channel] || this.channels[this.chname]
+  getChannel(channel=this.chname) {
+    return this.channels[channel] 
   }
 
   getCurrentChannel() {
@@ -137,8 +137,7 @@ class CabalDetails extends EventEmitter {
       return this.channels[this.chname]
   }
 
-  clearVirtualMessages(channel) {
-    if (!channel) channel = this.chname
+  clearVirtualMessages(channel=this.chname) {
     return this.channels[channel].clearVirtualMessages()
   }
 
@@ -161,14 +160,11 @@ class CabalDetails extends EventEmitter {
         details = new ChannelDetails(this._cabal, channel)
         this.channels[channel] = details
     }
-    // we weren't already in the channel
-    if (details.join()) { 
+    // we weren't already in the channel, join
+    if (!details.join()) { 
       var joinMsg = {
-        type: "chat/channel",
-        content: {
-          action: "join",
-          channel
-        }
+        type: "channel/join",
+        content: { channel }
       }
       // publish a join message to the cabal to signify our presence
       this._cabal.publish(joinMsg)
@@ -178,19 +174,29 @@ class CabalDetails extends EventEmitter {
   }
 
   leaveChannel(channel) {
+    if (!channel) channel = this.chname
+    if (channel === "!status") return
+    var joined = this.getJoinedChannels()
     var details = this.channels[channel]
-    // we weren't already in the channel
-    if (details.leave()) { 
+    if (!details) return
+    var left = details.leave()
+    // we were in the channel, leave
+    if (left) { 
       var leaveMsg = {
-        type: "chat/channel",
-        content: {
-          action: "leave",
-          channel
-        }
+        type: "channel/leave",
+        content: { channel }
       }
       this._cabal.publish(leaveMsg)
     }
-    this.closeChannel(channel)
+    var indexOldChannel = joined.indexOf(channel)
+    var newChannel
+    // open up another channel if we left the one we were viewing
+    if (channel === this.chname) {
+      let newIndex = indexOldChannel + 1 
+      if (indexOldChannel >= joined.length) newIndex = 0
+      newChannel = joined[newIndex] || "!status"
+    }
+    this.closeChannel(channel, newChannel)
   }
 
   getUsers() {
@@ -213,12 +219,15 @@ class CabalDetails extends EventEmitter {
   _initializeUser() {
     this._cabal.getLocalKey((err, lkey) => {
       if (err) throw err
-      // set local key for local user
       this.user.key = lkey
+      this.user.local = true
+      this.user.online = true
+      this.users[lkey] = this.user
       // try to get more data for user
       this._cabal.users.get(lkey, (err, user) => {
-          if (!user) { return }
+        if (!user) { return }
         this.user = user
+        // restore `user.local` and `user.online` as they don't come from cabal-core
         this.user.local = true
         this.user.online = true
         this._emitUpdate()
@@ -231,24 +240,71 @@ class CabalDetails extends EventEmitter {
     // populate channels
     cabal.channels.get((err, channels) => {
       channels.forEach((channel) => {
+        let details = this.channels[channel]
+        if (!details) {
+          details = new ChannelDetails(cabal, channel)
+        }
+        this.channels[channel] = details
+        // listen for updates that happen within the channel
+        cabal.messages.events.on(channel, this.messageListener.bind(this))
+
+        // add all users joined to a channel
+        cabal.joinedchannels.getUsers(channel, (err, users) => {
+          users.forEach((u) => this.channels[channel].addMember(u))
+        })
 
         // for each channel, get the topic
         cabal.topics.get(channel, (err, topic) => {
+          this.channels[channel].topic = topic || ''
+        })
+      })
+
+      cabal.getLocalKey((err, lkey) => {
+        cabal.joinedchannels.getMemberships(lkey, (err, channels) => {
+          if (channels.length === 0) {
+            // make default the first channel if no saved state exists
+            this.joinChannel('default')
+          }
+          for (let channel of channels) { 
+            // it's possible to be joined to a channel that `cabal.channels.get` doesn't return
+            // (it's an empty channel, with no messages)
             let details = this.channels[channel]
             if (!details) {
               details = new ChannelDetails(cabal, channel)
             }
-            details.topic = topic || ''
-            // save the channel and listen for updates that happen within it
-            this.channels[channel] = details
-            cabal.messages.events.on(channel, this.messageListener.bind(this))
+            details.joined = true
+          }
         })
       })
     })
 
+    // notify when a user has joined a channel
+    this.registerListener(cabal.joinedchannels.events, 'add', (channel, user) => {
+      if (!this.channels[channel]) { 
+        this.channels[channel] = new ChannelDetails(this._cabal, channel)
+      }
+      this.channels[channel].addMember(user)
+      this._emitUpdate()
+    })
+
+    // notify when a user has left a channel
+    this.registerListener(cabal.joinedchannels.events, 'remove', (channel, user) => {
+      let details = this.channels[channel]
+      if (!details) { 
+        details = new ChannelDetails(this._cabal, channel)
+        this.channels[channel] = details
+      }
+      details.removeMember(user)
+      this._emitUpdate()
+    })
+
     // register to be notified of new channels as they are created
     this.registerListener(cabal.channels.events, 'add', (channel) => {
-      this.channels[channel] = new ChannelDetails(cabal, channel)
+      let details = this.channels[channel]
+      if (!details) {
+        this.channels[channel] = new ChannelDetails(cabal, channel)
+      }
+      // TODO: only do this for our joined channels, instead of all channels
       // Calls fn with every new message that arrives in channel.
       cabal.messages.events.on(channel, this.messageListener.bind(this))
       this._emitUpdate()
@@ -270,6 +326,7 @@ class CabalDetails extends EventEmitter {
 
       this.registerListener(cabal.topics.events, 'update', (msg) => {
           var { channel, text } = msg.value.content
+          if (!this.channels[channel]) { this.channels[channel] = new ChannelDetails(this._cabal, channel) }
           this.channels[channel].topic = text || ''
           this._emitUpdate()
       })
