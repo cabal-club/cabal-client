@@ -141,8 +141,12 @@ class Client {
     cabal.ready(cabal.swarm)
   }
 
-  addStatusMessage (message, cabal = this.currentCabal) {
+  addStatusMessage (message, channel, cabal = this.currentCabal) {
     this.cabalToDetails(cabal).addStatusMessage(message)
+  }
+
+  clearStatusMessages (channel, cabal = this.currentCabal) {
+    this.cabalToDetails(cabal).clearVirtualMessages(channel)
   }
 
   getUsers (cabal = this.currentCabal) {

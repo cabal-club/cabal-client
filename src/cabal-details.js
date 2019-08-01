@@ -109,8 +109,9 @@ class CabalDetails extends EventEmitter {
     }
   }
 
-  addStatusMessage(message) {
-    this.channels[this.chname].addMessage(message)
+  addStatusMessage(message, channel) {
+    if (!channel) channel = this.chname
+    this.channels[channel].addMessage(message)
     this._emitUpdate()
   }
 
@@ -130,6 +131,15 @@ class CabalDetails extends EventEmitter {
 
   getCurrentChannel() {
       return this.chname
+  }
+
+  getCurrentChannelDetails() {
+      return this.channels[this.chname]
+  }
+
+  clearVirtualMessages(channel) {
+    if (!channel) channel = this.chname
+    return this.channels[channel].clearVirtualMessages()
   }
 
   getJoinedChannels() {

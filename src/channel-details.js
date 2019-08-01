@@ -59,19 +59,24 @@ class ChannelDetailsBase {
     this.opened = false
   }
 
+  clearVirtualMessages () {
+    this.virtualMessages = []
+  }
+
   getVirtualMessages(opts) {
     const limit = opts.limit
     const newerThan = opts.gt || 0
     const olderThan = opts.lt || Infinity
-    return stableSort(this.virtualMessages.filter((m) => {
+    var filtered = this.virtualMessages.filter((m) => {
       return (m.value.timestamp > newerThan && m.value.timestamp < olderThan)
-    }), v => v.value.timestamp).slice(-limit)
+    })
+    return stableSort(filtered, v => v.value.timestamp).slice(-limit)
   }
 
   interleaveVirtualMessages(messages, opts) {
     const virtualMessages = this.getVirtualMessages(opts)
-    const limit = opts.limit
-    return merge(virtualMessages, messages, v => v.value.timestamp).slice(-limit)
+    var cmp = (a, b) => parseInt(a.value.timestamp) - parseInt(b.value.timestamp)
+    return virtualMessages.concat(messages).sort(cmp).slice(-opts.limit)
   }
 
   /*

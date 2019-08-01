@@ -6,6 +6,11 @@ function stableSort(li, valueFunc = v => v) {
   }
   const midpoint = Math.floor(li.length / 2)
   return merge(li.slice(0, midpoint), li.slice(midpoint), valueFunc)
+
+  return merge(
+    stableSort(li.slice(0, midpoint), valueFunc), 
+    stableSort(li.slice(midpoint), valueFunc), 
+    valueFunc)
 }
 
 function merge(left, right, valueFunc = v => v) {
@@ -35,7 +40,6 @@ function merge(left, right, valueFunc = v => v) {
     res.push(...left.slice(lIndex))
   }
   
-  console.error('missing?', res.length === left.length + right.length)
   return res
 }
 
