@@ -289,12 +289,10 @@ class CabalDetails extends EventEmitter {
 
     // notify when a user has left a channel
     this.registerListener(cabal.joinedchannels.events, 'remove', (channel, user) => {
-      let details = this.channels[channel]
-      if (!details) { 
-        details = new ChannelDetails(this._cabal, channel)
-        this.channels[channel] = details
+      if (!this.channels[channel]) { 
+        this.channels[channel] = new ChannelDetails(this._cabal, channel)
       }
-      details.removeMember(user)
+      this.channels[channel].removeMember(user)
       this._emitUpdate()
     })
 
