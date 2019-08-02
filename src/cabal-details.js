@@ -249,7 +249,7 @@ class CabalDetails extends EventEmitter {
         cabal.messages.events.on(channel, this.messageListener.bind(this))
 
         // add all users joined to a channel
-        cabal.joinedchannels.getUsers(channel, (err, users) => {
+        cabal.memberships.getUsers(channel, (err, users) => {
           users.forEach((u) => this.channels[channel].addMember(u))
         })
 
@@ -260,7 +260,7 @@ class CabalDetails extends EventEmitter {
       })
 
       cabal.getLocalKey((err, lkey) => {
-        cabal.joinedchannels.getMemberships(lkey, (err, channels) => {
+        cabal.memberships.getMemberships(lkey, (err, channels) => {
           if (channels.length === 0) {
             // make default the first channel if no saved state exists
             this.joinChannel('default')
@@ -279,7 +279,7 @@ class CabalDetails extends EventEmitter {
     })
 
     // notify when a user has joined a channel
-    this.registerListener(cabal.joinedchannels.events, 'add', (channel, user) => {
+    this.registerListener(cabal.memberships.events, 'add', (channel, user) => {
       if (!this.channels[channel]) { 
         this.channels[channel] = new ChannelDetails(this._cabal, channel)
       }
@@ -288,7 +288,7 @@ class CabalDetails extends EventEmitter {
     })
 
     // notify when a user has left a channel
-    this.registerListener(cabal.joinedchannels.events, 'remove', (channel, user) => {
+    this.registerListener(cabal.memberships.events, 'remove', (channel, user) => {
       if (!this.channels[channel]) { 
         this.channels[channel] = new ChannelDetails(this._cabal, channel)
       }
