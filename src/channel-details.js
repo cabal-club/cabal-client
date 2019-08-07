@@ -88,7 +88,13 @@ class ChannelDetailsBase {
 
   interleaveVirtualMessages(messages, opts) {
     const virtualMessages = this.getVirtualMessages(opts)
-    var cmp = (a, b) => parseInt(a.value.timestamp) - parseInt(b.value.timestamp)
+    var cmp = (a, b) => {
+      // sort by timestamp
+      let diff = parseInt(a.value.timestamp) - parseInt(b.value.timestamp) 
+      // if timestamp was the same, and messages are by same author, sort by seqno
+      if (diff === 0 && a.key && b.key && a.key === b.key && a.seq && b.seq) return a.seq - b.seq
+      return diff
+    }
     return virtualMessages.concat(messages).sort(cmp).slice(-opts.limit)
   }
 
