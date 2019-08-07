@@ -242,9 +242,8 @@ class CabalDetails extends EventEmitter {
       channels.forEach((channel) => {
         let details = this.channels[channel]
         if (!details) {
-          details = new ChannelDetails(cabal, channel)
+          this.channels[channel] = new ChannelDetails(cabal, channel)
         }
-        this.channels[channel] = details
         // listen for updates that happen within the channel
         cabal.messages.events.on(channel, this.messageListener.bind(this))
 
@@ -258,23 +257,26 @@ class CabalDetails extends EventEmitter {
           this.channels[channel].topic = topic || ''
         })
       })
+    })
 
-      cabal.getLocalKey((err, lkey) => {
-        cabal.memberships.getMemberships(lkey, (err, channels) => {
-          if (channels.length === 0) {
-            // make default the first channel if no saved state exists
-            this.joinChannel('default')
+    cabal.getLocalKey((err, lkey) => {
+      cabal.memberships.getMemberships(lkey, (err, channels) => {
+        if (channels.length === 0) {
+          // make `default` the first channel if no saved state exists
+          this.joinChannel('default')
+        }
+        for (let channel of channels) { 
+          // it's possible to be joined to a channel that `cabal.channels.get` doesn't return
+          // (it's an empty channel, with no messages)
+          let details = this.channels[channel]
+          if (!details) {
+            this.channels[channel] = new ChannelDetails(cabal, channel)
+            // listen for updates that happen within the channel
+            cabal.messages.events.on(channel, this.messageListener.bind(this))
           }
-          for (let channel of channels) { 
-            // it's possible to be joined to a channel that `cabal.channels.get` doesn't return
-            // (it's an empty channel, with no messages)
-            let details = this.channels[channel]
-            if (!details) {
-              details = new ChannelDetails(cabal, channel)
-            }
-            details.joined = true
-          }
-        })
+          this.channels[channel].joined = true
+        }
+      this._emitUpdate()
       })
     })
 
