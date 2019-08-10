@@ -26,7 +26,7 @@ class Client {
         protocolRegex: /^cabal:\/\/([0-9a-f]{64})/i,
         txtRegex: /^"?cabalkey=([0-9a-f]{64})"?$/i,
     }
-    // persistentCache: {
+    // opts.persistentCache: {
     //   read: async function ()   // aka cache lookup function
     //   write: async function ()  // aka cache write function
     // }
@@ -44,7 +44,6 @@ class Client {
 
   resolveName (name, cb) {
       return this.cabalDns.resolveName(name).then((key) => { 
-          console.error(key)
           if (!cb) return Client.scrub(key)
           cb(Client.scrub(key)) 
       })
@@ -55,9 +54,9 @@ class Client {
   }
 
   addCabal (key) {
-      let promise
+      let cabalPromise
       if (typeof key === 'string') {
-          promise = this.resolveName(key).then((resolvedKey) => {
+          cabalPromise = this.resolveName(key).then((resolvedKey) => {
             const {temp, dbdir} = this.config
             const storage = temp ? ram : dbdir + resolvedKey
             if (!temp) try { mkdirp.sync(path.join(dbdir, resolvedKey, 'views')) } catch (e) {}
@@ -67,7 +66,7 @@ class Client {
             return cabal
           })
       } else {
-          promise = new Promise((res, rej) => {
+          cabalPromise = new Promise((res, rej) => {
             // a cabal instance was passed in
             var cabal = key
             this._keyToCabal[cabal.key] = cabal
@@ -75,7 +74,7 @@ class Client {
           })
       }
       return new Promise((res, rej) => {
-          promise.then((cabal) => {
+          cabalPromise.then((cabal) => {
               if (!this.currentCabal) {
                   this.currentCabal = cabal
               }
