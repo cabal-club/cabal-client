@@ -1,39 +1,13 @@
 const Cabal = require('cabal-core')
 const CabalDetails = require('./cabal-details')
 const crypto = require('hypercore-crypto')
+const DatDns = require("dat-dns")
 const ram = require('random-access-memory')
 const memdb = require('memdb')
 const level = require('level')
 const path = require('path')
 const mkdirp = require("mkdirp")
 
-/*
-const cabalDns = require('dat-dns')({
-  hashRegex: /^[0-9a-f]{64}?$/i,
-  recordName: 'cabal',
-  protocolRegex: /^cabal:\/\/([0-9a-f]{64})/i,
-  txtRegex: /^"?cabalkey=([0-9a-f]{64})"?$/i,
-  persistentCache: {
-    read: async function (name, err) {
-      if (name in config.cache) {
-        var cache = config.cache[name]
-        if (cache.expiresAt < Date.now()) { // if ttl has expired: warn, but keep using
-            console.log(`${chalk.redBright('Note:')} the TTL for ${name} has expired`)
-        }
-        return cache.key
-      }
-      // dns record wasn't found online and wasn't in the cache
-      throw err
-    },
-    write: async function (name, key, ttl) {
-      var expireOffset = +(new Date(ttl * 1000)) // convert to epoch time
-      var expiredTime = Date.now() + expireOffset
-      config.cache[name] = { key: key, expiresAt: expiredTime }
-      saveConfig(configFilePath, config)
-    }
-  }
-})
-*/
 class Client {
   constructor (opts) {
     if (!(this instanceof Client)) return new Client(opts)
@@ -45,6 +19,19 @@ class Client {
     this.currentCabal = null
     this.config = opts.config
     this.maxFeeds = opts.maxFeeds || 1000
+
+    let cabalDnsOpts = {
+        hashRegex: /^[0-9a-f]{64}?$/i,
+        recordName: 'cabal',
+        protocolRegex: /^cabal:\/\/([0-9a-f]{64})/i,
+        txtRegex: /^"?cabalkey=([0-9a-f]{64})"?$/i,
+    }
+    // persistentCache: {
+    //   read: async function ()   // aka cache lookup function
+    //   write: async function ()  // aka cache write function
+    // }
+    if (opts.persistentCache) cabalDnsOpts.persistentCache = opts.persistentCache
+    this.cabalDns = DatDns(cabalDnsOpts)
   }
 
   static getDatabaseVersion () {
@@ -55,39 +42,51 @@ class Client {
     return key.replace('cabal://', '').replace('cbl://', '').replace('dat://', '').replace(/\//g, '')
   }
 
+  resolveName (name, cb) {
+      return this.cabalDns.resolveName(name).then((key) => { 
+          console.error(key)
+          if (!cb) return Client.scrub(key)
+          cb(Client.scrub(key)) 
+      })
+  }
+
   createCabal () {
     return this.addCabal(crypto.keyPair().publicKey.toString('hex'))
   }
 
   addCabal (key) {
-    return new Promise((resolve, reject) => {
-      var cabal
-      // error states?
+      let promise
       if (typeof key === 'string') {
-        key = Client.scrub(key)
-        const {temp, dbdir} = this.config
-        const storage = temp ? ram : dbdir + key
-        if (!temp) try { mkdirp.sync(path.join(dbdir, key, 'views')) } catch (e) {}
-        var db = temp ? memdb() : level(path.join(dbdir, key, 'views'))
-        cabal = Cabal(storage, key, {db: db, maxFeeds: this.maxFeeds})
-        this._keyToCabal[key] = cabal
+          promise = this.resolveName(key).then((resolvedKey) => {
+            const {temp, dbdir} = this.config
+            const storage = temp ? ram : dbdir + resolvedKey
+            if (!temp) try { mkdirp.sync(path.join(dbdir, resolvedKey, 'views')) } catch (e) {}
+            var db = temp ? memdb() : level(path.join(dbdir, resolvedKey, 'views'))
+            var cabal = Cabal(storage, resolvedKey, {db: db, maxFeeds: this.maxFeeds})
+            this._keyToCabal[resolvedKey] = cabal
+            return cabal
+          })
       } else {
-        // a cabal instance was passed in
-        cabal = key
-        this._keyToCabal[cabal.key] = cabal
+          promise = new Promise((res, rej) => {
+            // a cabal instance was passed in
+            var cabal = key
+            this._keyToCabal[cabal.key] = cabal
+            res(cabal)
+          })
       }
-
-      if (!this.currentCabal) {
-        this.currentCabal = cabal
-      }
-
-      cabal.ready(() => {
-        const details = new CabalDetails(cabal)
-        this.cabals.set(cabal, details)
-        cabal.swarm()
-        this.getCurrentCabal()._emitUpdate()
-        resolve(details)
-      })
+      return new Promise((res, rej) => {
+          promise.then((cabal) => {
+              if (!this.currentCabal) {
+                  this.currentCabal = cabal
+              }
+              cabal.ready(() => {
+                  const details = new CabalDetails(cabal)
+                  this.cabals.set(cabal, details)
+                  cabal.swarm()
+                  this.getCurrentCabal()._emitUpdate()
+                  res(details)
+              })
+          })
     })
   }
 
@@ -119,6 +118,7 @@ class Client {
   }
 
   getCurrentCabal () {
+      console.error("current cab", this.currentCabal)
     return this.cabalToDetails(this.currentCabal)
   }
 
