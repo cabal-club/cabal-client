@@ -26,10 +26,9 @@ class Client {
         protocolRegex: /^cabal:\/\/([0-9a-f]{64})/i,
         txtRegex: /^"?cabalkey=([0-9a-f]{64})"?$/i,
     }
-    // opts.persistentCache: {
+    // also takes opts.persistentCache which has a read and write function
     //   read: async function ()   // aka cache lookup function
     //   write: async function ()  // aka cache write function
-    // }
     if (opts.persistentCache) cabalDnsOpts.persistentCache = opts.persistentCache
     this.cabalDns = DatDns(cabalDnsOpts)
   }
@@ -117,7 +116,6 @@ class Client {
   }
 
   getCurrentCabal () {
-      console.error("current cab", this.currentCabal)
     return this.cabalToDetails(this.currentCabal)
   }
 
