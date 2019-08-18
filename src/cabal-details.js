@@ -14,7 +14,7 @@ class CabalDetails extends EventEmitter {
     
     this.name = ''
     this.topic = ''
-    this.users = {} // public keys -> cabal-core user?
+    this.users = {} // public keys -> cabal-core use
     this.listeners = [] // keep track of listeners so we can remove them when we remove a cabal
     this.user = { local: true, online: true, key: '', name: '' }
     this._initialize(done)
