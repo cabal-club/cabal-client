@@ -146,7 +146,7 @@ class CabalDetails extends EventEmitter {
   }
 
   getLocalUser() {
-    return this.user
+    return Object.assign({}, this.user)
   }
 
   getLocalName() {
@@ -200,7 +200,7 @@ class CabalDetails extends EventEmitter {
   }
 
   getUsers() {
-    return this.users
+    return Object.assign({}, this.users)
   }
 
   _emitUpdate() {
