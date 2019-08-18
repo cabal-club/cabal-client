@@ -16,7 +16,7 @@ class ChannelDetailsBase {
     maybe store a negative offset to look up?*/
     this.lastRead = 0 /* timestamp in epoch time */
     this.joined = false
-    this.opened = false
+    this.focused = false
     this.topic = ''
   }
 
@@ -37,7 +37,7 @@ class ChannelDetailsBase {
   }
 
   addMention(mention) {
-    if (!this.opened) {
+    if (!this.focused) {
       this.mentions.push(mention)
     }
   }
@@ -47,7 +47,7 @@ class ChannelDetailsBase {
   }
 
   handleMessage(message) {
-    if (!this.opened) {
+    if (!this.focused) {
       // ++var is an optimization:
       // var++ creates a temporary variable while ++var doesn't
       ++this.newMessageCount
@@ -64,12 +64,12 @@ class ChannelDetailsBase {
     this.mentions = []
   }
 
-  open() {
-    this.opened = true
+  focus() {
+    this.focused = true
   }
 
-  close() {
-    this.opened = false
+  unfocus() {
+    this.focused = false
   }
 
   clearVirtualMessages () {

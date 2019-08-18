@@ -85,23 +85,23 @@ class CabalDetails extends EventEmitter {
     return details.getMembers().map((ukey) => this.users[ukey]).filter((u) => u)
   }
 
-  openChannel(channel=this.chname, keepUnread=false) {
+  focusChannel(channel=this.chname, keepUnread=false) {
     let currentChannel = this.channels[this.chname]
     if (currentChannel) {
       // mark previous as read
       if (!keepUnread) currentChannel.markAsRead()
-      currentChannel.close()
+      currentChannel.unfocus()
     }
     this.chname = channel
     currentChannel = this.channels[channel]
-    currentChannel.open()
+    currentChannel.focus()
     this._emitUpdate()
   }
 
-  closeChannel(channel=this.chname, newChannel) {
-    this.channels[channel].close()
+  unfocusChannel(channel=this.chname, newChannel) {
+    this.channels[channel].unfocus()
     // open a new channel after closing `channel`
-    if (newChannel) this.openChannel(newChannel)
+    if (newChannel) this.focusChannel(newChannel)
   }
 
   addStatusMessage(message, channel=this.chname) {
@@ -170,7 +170,7 @@ class CabalDetails extends EventEmitter {
       this._cabal.publish(joinMsg)
     }
     // we probably always want to open a joined channel?
-    this.openChannel(channel)
+    this.focusChannel(channel)
   }
 
   leaveChannel(channel) {
@@ -196,7 +196,7 @@ class CabalDetails extends EventEmitter {
       if (indexOldChannel >= joined.length) newIndex = 0
       newChannel = joined[newIndex] || "!status"
     }
-    this.closeChannel(channel, newChannel)
+    this.unfocusChannel(channel, newChannel)
   }
 
   getUsers() {

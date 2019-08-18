@@ -206,13 +206,13 @@ class Client {
   }
 
   // returns { newMessageCount: <number of messages unread>, lastRead: <timestamp> }
-  openChannel (channel, cabal = this.currentCabal) {
-    this.cabalToDetails(cabal).openChannel(channel)
+  focusChannel (channel, cabal = this.currentCabal) {
+    this.cabalToDetails(cabal).focusChannel(channel)
     var details = this.cabalToDetails(cabal)._emitUpdate()
   }
 
-  closeChannel (channel, cabal = this.currentCabal) {
-    return this.cabalToDetails(cabal).closeChannel(channel)
+  unfocusChannel (channel, cabal = this.currentCabal) {
+    return this.cabalToDetails(cabal).unfocusChannel(channel)
   }
 
   getCurrentChannel () {
