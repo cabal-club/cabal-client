@@ -2,7 +2,7 @@ const EventEmitter = require('events')
 const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
 
 class CabalDetails extends EventEmitter {
-  constructor(cabal) {
+  constructor(cabal, done) {
     super()
     this._cabal = cabal
     this.key = cabal.key
@@ -17,7 +17,7 @@ class CabalDetails extends EventEmitter {
     this.users = {} // public keys -> cabal-core user?
     this.listeners = [] // keep track of listeners so we can remove them when we remove a cabal
     this.user = { local: true, online: true, key: '', name: '' }
-    this._initialize()
+    this._initialize(done)
   }
 
   _handleMention(message) {
@@ -216,9 +216,9 @@ class CabalDetails extends EventEmitter {
     this.listeners.forEach((obj) => { obj.source.removeListener(obj.event, obj.listener)})
   }
 
-  _initializeUser() {
+  _initializeUser(done) {
     this._cabal.getLocalKey((err, lkey) => {
-      if (err) throw err
+      if (err) return done(err)
       this.user.key = lkey
       this.user.local = true
       this.user.online = true
@@ -231,11 +231,12 @@ class CabalDetails extends EventEmitter {
         this.user.local = true
         this.user.online = true
         this._emitUpdate()
+        done(null)
       })
     })
   }
 
-  _initialize() {
+  _initialize(done) {
     const cabal = this._cabal
     // populate channels
     cabal.channels.get((err, channels) => {
@@ -313,7 +314,7 @@ class CabalDetails extends EventEmitter {
     cabal.users.getAll((err, users) => {
       if (err) return
       this.users = users
-      this._initializeUser()
+      this._initializeUser(done)
 
       this.registerListener(cabal.users.events, 'update', (key) => {
         cabal.users.get(key, (err, user) => {

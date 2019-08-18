@@ -52,7 +52,8 @@ class Client {
     return this.addCabal(crypto.keyPair().publicKey.toString('hex'))
   }
 
-  addCabal (key) {
+  addCabal (key, cb) {
+      if (!cb) cb = function noop () {}
       let cabalPromise
       if (typeof key === 'string') {
           cabalPromise = this.resolveName(key).then((resolvedKey) => {
@@ -78,7 +79,7 @@ class Client {
                   this.currentCabal = cabal
               }
               cabal.ready(() => {
-                  const details = new CabalDetails(cabal)
+                  const details = new CabalDetails(cabal, cb)
                   this.cabals.set(cabal, details)
                   cabal.swarm()
                   this.getCurrentCabal()._emitUpdate()
