@@ -92,7 +92,11 @@ class ChannelDetailsBase {
       // sort by timestamp
       let diff = parseInt(a.value.timestamp) - parseInt(b.value.timestamp) 
       // if timestamp was the same, and messages are by same author, sort by seqno
-      if (diff === 0 && a.key && b.key && a.key === b.key && a.seq && b.seq) return a.seq - b.seq
+      if (diff === 0 
+        && a.key && b.key && a.key === b.key 
+        && a.hasOwnProperty("seq") && b.hasOwnProperty("seq")) {
+        return a.seq - b.seq
+      }
       return diff
     }
     return virtualMessages.concat(messages).sort(cmp).slice(-opts.limit)
