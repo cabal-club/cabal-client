@@ -99,9 +99,9 @@ class ChannelDetailsBase {
   }
 
   /*
-  addMessage({ timestamp: Date.now(), type: "status", text: "" }})
+  addVirtualMessage({ timestamp: Date.now(), type: "status", text: "" }})
   */
-  addMessage(msg) {
+  addVirtualMessage(msg) {
     /*
     msg will be on the format of
     {timestamp, type, text} 
@@ -182,7 +182,7 @@ class ChannelDetails extends ChannelDetailsBase {
           const dayTimestamp = msgTime - (msgTime % (24*60*60*1000))
           if (!this.datesSeen.has(dayTimestamp)) {
             this.datesSeen.add(dayTimestamp)
-            this.addMessage({
+            this.addVirtualMessage({
               key: this.name,
               value: {
                 timestamp: dayTimestamp,
