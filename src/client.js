@@ -37,14 +37,14 @@ class Client {
     return Cabal.databaseVersion
   }
 
-  static scrub (key) {
+  static scrubKey (key) {
     return key.replace('cabal://', '').replace('cbl://', '').replace('dat://', '').replace(/\//g, '')
   }
 
   resolveName (name, cb) {
       return this.cabalDns.resolveName(name).then((key) => { 
-          if (!cb) return Client.scrub(key)
-          cb(Client.scrub(key)) 
+          if (!cb) return Client.scrubKey(key)
+          cb(Client.scrubKey(key)) 
       })
   }
 
