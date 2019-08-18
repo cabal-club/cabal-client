@@ -146,18 +146,6 @@ class ChannelDetailsBase {
     return joined
   }
 }
-/*
-msg = {
-  key: '' // dunno
-  value: {
-    timestamp: '' // dunno
-    type: 'status/date-change'
-    content: {
-      time: '<epochtime>'
-    }
-  }
-}
-*/
 
 class ChannelDetails extends ChannelDetailsBase {
   constructor(cabal, channelName) {
