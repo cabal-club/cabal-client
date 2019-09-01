@@ -127,6 +127,7 @@ class Client {
 
   // returns cabal-core instance, not a cabal details
   _getCabalByKey (key) {
+    key = Client.scrubKey(key)
     if (!key) {
       return this.currentCabal
     }
