@@ -215,6 +215,14 @@ Returns a list of channels the user has joined for the specified cabal. If no ca
 
 Returns the currently focused channel name.
 
+### `client.subscribe (listener, cabal = this.currentCabal)`
+
+Add a new listener for the `update` event.
+
+### `client.unsubscribe (listener, cabal = this.currentCabal, listener)`
+
+Remove a previously added listener.
+
 ### `client.markChannelRead (channel, cabal = this.currentCabal)`
 
 Mark the channel as read.

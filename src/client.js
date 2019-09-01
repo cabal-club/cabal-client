@@ -177,13 +177,13 @@ class Client {
     return this._keyToCabal[key]
   }
 
-  // subscribe (listener, cabal = this.currentCabal) {
-  //   this.cabalToDetails(cabal).on('update', listener)
-  // }
-  //
-  // unsubscribe (listener, cabal = this.currentCabal, listener) {
-  //   this.cabalToDetails(cabal).removeListener('update', listener)
-  // }
+  subscribe (listener, cabal = this.currentCabal) {
+    this.cabalToDetails(cabal).on('update', listener)
+  }
+
+  unsubscribe (listener, cabal = this.currentCabal, listener) {
+    this.cabalToDetails(cabal).removeListener('update', listener)
+  }
 
   getMessages (opts, cb, cabal = this.currentCabal) {
     var details = this.cabalToDetails(cabal)
