@@ -125,7 +125,8 @@ class Client {
     return this.cabalToDetails(this.currentCabal)
   }
 
-  getCabalByKey (key) {
+  // returns cabal-core instance, not a cabal details
+  _getCabalByKey (key) {
     if (!key) {
       return this.currentCabal
     }
