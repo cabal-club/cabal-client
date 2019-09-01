@@ -1,47 +1,81 @@
 # cabal-client
+`cabal-client` is a new type of client library for cabal (chat) clients.
 
-> helper module for cabal clients
+The goal: new chat clients can now be implemented using _only_ this library, without having to mess around with
+[`cabal-core`](https://github.com/cabal-club/cabal-core/) itself.
 
-There are certain pieces of state that clients seem to need to manage that need
-to be stored across sessions but don't belong in the [p2p
-database](https://github.com/cabal-club/cabal-core). `cabal-client` handles
-
-- remembering what messages or channels have / have not been read by the user
-- remembering what channels the user has open
-
-*This README is just a proposal for an API.*
+Things which this library makes possible:
+* consolidates logic common to all chat clients
+* leaving and joining of channels
+* virtual messages (such as status messages) and virtual channels (currently only the `!status` channel)
+* handling multiple cabal instances
+* receiving unread notifications and mentions for channels
+* resolving of DNS shortnames (cabal.chat) to cabal keys
 
 ## Usage
+See [`cabal-cli`](https://github.com/cabal-club/cabal-cli/) for an example client implementation.
 
 ```js
-var Cabal = require('cabal-core')
 var Client = require('cabal-client')
 
-var cabal = Cabal(ram, null, {username: 'bob'})
-var client = Client(cabal)  // uses system's application directory for data storage
-
-cabal.db.ready(function () {
-  client.getOpenChannels(function (err, channels) {
-    // channels => ['default', 'cabal-dev']
-  })
-
-  client.getUnreadMessages('default', function (err, msgs) {
-    // msgs => [ { type: 'text/chat', ... } ]
-  })
-
-  client.openChannel('3d-graphics', function (err) {
-    // unread state for this channel is now tracked
-  })
-
-  client.closeChannel('3d-graphics', function (err) {
-    // unread state for this channel is forgotten
-  })
-
-  client.markChannelRead('cabal-dev', function (err) {
-    // marks all messages in this channel as read
-  })
+const client = new Client({
+  maxFeeds: maxFeeds,
+  config: {
+    dbdir: archivesdir,
+    temp: args.temp
+  },
+  // persistent caching means that we cache resolved DNS shortnames, allowing access to their cabals while offline
+  persistentCache: {
+    // localCache is something you have to implement yourself
+    read: async function (name, err) {
+      if (name in config.cache) {
+        var cache = localCache[name]
+        if (cache.expiresAt < Date.now()) { // if ttl has expired: warn, but keep using
+          console.error(`The TTL for ${name} has expired`)
+        }
+        return cache.key
+      }
+      // dns record wasn't found online and wasn't in the cache
+      return null
+    },
+    write: async function (name, key, ttl) {
+      var expireOffset = +(new Date(ttl * 1000)) // convert to epoch time
+      var expiredTime = Date.now() + expireOffset
+      if (!localCache) localCache = {}
+      localCache[name] = { key: key, expiresAt: expiredTime }
+    }
+  }
 })
+
+client.createCabal()
+  .then((cabal) => {
+    // resolves when the cabal is ready, returns a CabalDetails instance
+  })
 ```
+
+## Concepts
+
+`cabal-client` has **three core abstractions**:
+[`Client`](https://github.com/cabal-club/cabal-client/pull/11/files#diff-cf27c1d543e886c89cd9ac8b8aeaf05b),
+[`CabalDetails`](https://github.com/cabal-club/cabal-client/pull/11/files#diff-29fea628f7f8cdba0f19b72b4fb6ba86) and
+[`ChannelDetails`](https://github.com/cabal-club/cabal-client/pull/11/files#diff-d4f5ba7622d714169e3279f70bca49a8).
+
+[`Client`](https://github.com/cabal-club/cabal-client/pull/11/files#diff-cf27c1d543e886c89cd9ac8b8aeaf05b) is the
+entrypoint. It has a list of `CabalDetails` (one `details` for each joined cabal) as well as an API for interacting with
+a cabal (getting a count of the new messages for a channel, the joined channels for the current peer etc).
+
+[`CabalDetails`](https://github.com/cabal-club/cabal-client/pull/11/files#diff-29fea628f7f8cdba0f19b72b4fb6ba86) is the
+instance that clients mostly operate on, as it encapsulates all information for a particular cabal. (joined channels,
+users in that channel, the topic). **It also emits events.**
+
+When a change has happened, a `CabalDetails` instance will call `this._emitUpdate()`. When a client receives this
+event, they should update their state & rerender. (Check out [how the cli does
+it](https://github.com/cabal-club/cabal-cli/pull/126).)
+
+[`ChannelDetails`](https://github.com/cabal-club/cabal-client/pull/11/files#diff-d4f5ba7622d714169e3279f70bca49a8)
+encapsulates everything channels (mentions in that channel, status messages for the channel (like having called a
+command eg `/names`, when it was last read, if it's currently being viewed, if it's joined and so on). It also has a
+barebones implementation for virtual channels, which currently is only the `!status` channel.
 
 ## API
 
@@ -49,17 +83,61 @@ cabal.db.ready(function () {
 var Client = require('cabal-client')
 ```
 
-### var client = Client(cabal[, storage])
 
-Create a client instance over the cabal db `cabal`.
+### var client = Client(opts)
 
-`storage`, if provided, must be a LevelUP or LevelDOWN instance. If not
-provided, the system's local application directory for the app 'cabal' is used.
+Create a client instance from which to manage multiple [`cabal-core`](https://github.com/cabal-club/cabal-core/) instances.
 
-### client.getOpenChannels(cb)
+####  `opts`
+```
+    {
+        // if `temp` is true no data is persisted to disk. 
+        // `dbdir` is the directory to store the cabal data
+        config: {temp, dbdir}, 
+        maxFeeds, // max amount of feeds to sync. default is 1000
 
-Returns a list of channel names that the user has open. The `default` channel is
-open by default.
+        // opts.persistentCache has a read and write function. optional
+        //   read: async function ()   // aka cache lookup function
+        //   write: async function ()  // aka cache write function
+        persistentCache 
+    }
+```
+
+### `Client.getDatabaseVersion()`
+
+Get the current database version. 
+
+### `Client.scrubKey(key)`
+
+Returns a 64 bit hash if passed in e.g. `cabal://1337..7331` -> `1337..7331`.
+
+### `Client.getCabalDirectory()`
+
+Returns a string path of where all of the cabals are stored on the hard drive.
+
+### `cabalToDetails (cabal = this.currentCabal)`
+
+Returns a `CabalDetails` instance for the passed in `cabal-core` instance.
+
+### `addStatusMessage (message, channel, cabal = this.currentCabal)`
+
+Add a status message, displayed client-side only, to the specified channel and cabal. If no cabal is specified, the currently focused cabal is used. 
+
+### `clearStatusMessages (channel, cabal = this.currentCabal)`
+
+Clear status messages for the specified channel.
+
+### `getUsers (cabal = this.currentCabal)`
+
+Returns a list of all the users for the specified cabal. If no cabal is specified, the currently focused cabal is used. 
+
+### `getChannels (cabal = this.currentCabal)`
+
+Returns a list of all channels for the specified cabal. If no cabal is specified, the currently focused cabal is used. 
+
+### `getJoinedChannels (cabal = this.currentCabal)`
+
+Returns a list of channels the user has joined for the specified cabal. If no cabal is specified, the currently focused cabal is used. 
 
 ### client.getUnreadMessages(channel, cb)
 
@@ -95,4 +173,4 @@ $ npm install cabal-client
 
 ## License
 
-ISC
+AGPL-3.0-or-later
