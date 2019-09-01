@@ -138,7 +138,8 @@ class Client {
     if (details) {
       return details
     }
-    throw new Error('Could not resolve cabal to details, did ya pass in a cabal instance?')
+    // Could not resolve cabal to details, did you pass in a cabal instance?
+    return null
   }
 
   connect (cabal = this.currentCabal) {
