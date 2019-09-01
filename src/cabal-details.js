@@ -113,17 +113,6 @@ class CabalDetails extends EventEmitter {
     return Object.keys(this.channels).sort()
   }
 
-  getJoinedChannels() {
-    return Object.keys(this.channels).sort()
-      .filter((ch) => this.channels[ch].joined)
-  }
-
-  getJoinedUsers (channel=this.chname) {
-    var details = this.channels[channel]
-    if (!details) return []
-    return details.getMembers()
-  }
-
   // returns a ChannelDetails object
   getChannel(channel=this.chname) {
     return this.channels[channel] 

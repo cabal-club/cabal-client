@@ -228,6 +228,77 @@ Remove a previously added listener.
 Mark the channel as read.
 
 
+### `CabalDetails` methods
+Any method that returns an instance of `CabalDetails` will have the following methods.
+
+### `publishMessage(msg, opts, cb)`
+Publish a message. See [`cabal-core`](https://github.com/cabal-club/cabal-core/) for the full list of options.
+
+### `publishNick(nick, cb)`
+Announce a new nickname.
+
+### `publishChannelTopic(channel=this.chname, topic, cb)`
+Publish a new channel topic to `channel`. `cb` is called when publishing has finished.
+
+### `getTopic(channel=this.chname)`
+Returns the current topic of `channel` as a string.
+
+### `getChannelMembers(channel=this.chname)`
+
+Return the list of user that have joined `channel`. Note: this can be a subset of all of the users in a cabal.
+
+### `focusChannel(channel=this.chname, keepUnread=false)`
+View `channel`, closing the previously focused channel.
+
+### `unfocusChannel(channel=this.chname, newChannel)`
+Close `channel`.
+
+### `addStatusMessage(message, channel=this.chname)`
+Add a status message, visible locally only.
+
+### `getChannels()`
+Returns a list of all the channels in this cabal.
+
+### `getCurrentChannel()`
+Get the name of the current channel
+
+### `clearVirtualMessages(channel=this.chname)`
+Remove all of the virtual (i.e. status) messages associated with this channel. Virtual messages are local only.
+
+### `getJoinedChannels()`
+Returns a list of all of the channel names the user has joined.
+
+### `getLocalUser()`
+Get your user for this cabal. Returns an object containing:
+```
+{
+    local: true,
+    online: true,
+    name: '',
+    key: ''
+}
+```
+
+### `getLocalName()`
+Get the user's name in this cabal.
+
+### `joinChannel(channel)`
+Join a channel. This is distinct from focusing a channel, as this actually tracks changes and publishes a message
+announcing that you have joined the channel
+
+### `leaveChannel(channel)`
+Leave a joined channel. This publishes a message announcing that you have left the channel.
+
+### `getUsers()`
+Returns an JSON object of all of the users in this cabal. Each key is the public key of its corresponding user.
+
+### `details.on('update', cb)
+The event emitted when anything has changed with this cabal details. You will want to rerender when it has been emitted.
+
+### `_destroy ()`
+Destroy all of the listeners associated with this details instance
+
+
 ## Install
 
 With [npm](https://npmjs.org/) installed, run
