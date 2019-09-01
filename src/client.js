@@ -75,7 +75,8 @@ class Client {
       }
       return new Promise((res, rej) => {
           cabalPromise.then((cabal) => {
-              this.focusCabal(cabal)
+              cabal = this._coerceToCabal(cabal)
+              this.currentCabal = cabal
               cabal.ready(() => {
                   const details = new CabalDetails(cabal, cb)
                   this.cabals.set(cabal, details)
