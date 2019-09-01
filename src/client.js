@@ -48,6 +48,7 @@ class Client {
 
   resolveName (name, cb) {
       return this.cabalDns.resolveName(name).then((key) => { 
+          if (key === null) return null
           if (!cb) return Client.scrubKey(key)
           cb(Client.scrubKey(key)) 
       })
@@ -60,8 +61,13 @@ class Client {
   addCabal (key, cb) {
       if (!cb) cb = function noop () {}
       let cabalPromise
+      let dnsFailed = false
       if (typeof key === 'string') {
           cabalPromise = this.resolveName(key).then((resolvedKey) => {
+            if (resolvedKey === null) {
+                dnsFailed = true
+                return
+            }
             let {temp, dbdir} = this.config
             dbdir = dbdir || path.join(Client.getCabalDirectory(), "archives")
             const storage = temp ? ram : path.join(dbdir, resolvedKey)
@@ -81,6 +87,7 @@ class Client {
       }
       return new Promise((res, rej) => {
           cabalPromise.then((cabal) => {
+              if (dnsFailed) return rej()
               cabal = this._coerceToCabal(cabal)
               this.currentCabal = cabal
               cabal.ready(() => {
