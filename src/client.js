@@ -112,7 +112,7 @@ class Client {
   }
 
   getCabalKeys () {
-    return Object.keys(this._keyToCabal) // ???: sorted?
+    return Object.keys(this._keyToCabal).sort()
   }
 
   getCurrentCabal () {
