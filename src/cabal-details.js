@@ -225,11 +225,12 @@ class CabalDetails extends EventEmitter {
       this.users[lkey] = this.user
       // try to get more data for user
       this._cabal.users.get(lkey, (err, user) => {
-        if (!user) { return }
+        if (err || !user) { return }
         this.user = user
         // restore `user.local` and `user.online` as they don't come from cabal-core
         this.user.local = true
         this.user.online = true
+        this.users[lkey] = this.user
         this._emitUpdate()
         done(null)
       })
