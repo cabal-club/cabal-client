@@ -142,10 +142,6 @@ class Client {
     return null
   }
 
-  connect (cabal = this.currentCabal) {
-    cabal.ready(cabal.swarm)
-  }
-
   addStatusMessage (message, channel, cabal = this.currentCabal) {
     this.cabalToDetails(cabal).addStatusMessage(message)
   }
