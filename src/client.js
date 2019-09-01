@@ -177,13 +177,13 @@ class Client {
     return this._keyToCabal[key]
   }
 
-  subscribe (cabal = this.currentCabal, listener) {
-    this.cabalToDetails(cabal).on('update', listener)
-  }
-
-  unsubscribe (cabal = this.currentCabal, listener) {
-    this.cabalToDetails(cabal).removeListener('update', listener)
-  }
+  // subscribe (listener, cabal = this.currentCabal) {
+  //   this.cabalToDetails(cabal).on('update', listener)
+  // }
+  //
+  // unsubscribe (listener, cabal = this.currentCabal, listener) {
+  //   this.cabalToDetails(cabal).removeListener('update', listener)
+  // }
 
   getMessages (opts, cb, cabal = this.currentCabal) {
     var details = this.cabalToDetails(cabal)
@@ -217,14 +217,13 @@ class Client {
     return this.cabalToDetails(cabal).getChannel(channel).getMentions()
   }
 
-  // returns { newMessageCount: <number of messages unread>, lastRead: <timestamp> }
-  focusChannel (channel, cabal = this.currentCabal) {
-    this.cabalToDetails(cabal).focusChannel(channel)
+  focusChannel (channel, keepUnread = false, cabal = this.currentCabal) {
+    this.cabalToDetails(cabal).focusChannel(channel, keepUnread)
     var details = this.cabalToDetails(cabal)._emitUpdate()
   }
 
-  unfocusChannel (channel, cabal = this.currentCabal) {
-    return this.cabalToDetails(cabal).unfocusChannel(channel)
+  unfocusChannel (channel, newChannel, cabal = this.currentCabal) {
+    return this.cabalToDetails(cabal).unfocusChannel(channel, newChannel)
   }
 
   getCurrentChannel () {

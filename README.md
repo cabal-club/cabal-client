@@ -83,7 +83,7 @@ barebones implementation for virtual channels, which currently is only the `!sta
 var Client = require('cabal-client')
 ```
 
-
+### `client.js` methods
 ### var client = Client(opts)
 
 Create a client instance from which to manage multiple [`cabal-core`](https://github.com/cabal-club/cabal-core/) instances.
@@ -103,6 +103,8 @@ Create a client instance from which to manage multiple [`cabal-core`](https://gi
     }
 ```
 
+**Note:** If a method is written with a capitalized Client e.g. `Client.scrubKey(key)` it is a [static method](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/static).
+
 ### `Client.getDatabaseVersion()`
 
 Get the current database version. 
@@ -115,53 +117,108 @@ Returns a 64 bit hash if passed in e.g. `cabal://1337..7331` -> `1337..7331`.
 
 Returns a string path of where all of the cabals are stored on the hard drive.
 
-### `cabalToDetails (cabal = this.currentCabal)`
+
+### `client.resolveName (name, cb)`
+
+Resolve the DNS shortname `name`. If `name` is already a cabal key, it will be returned and the DNS lookup is
+aborted.
+
+Returns the cabal key in `cb`. If `cb` is null a Promise is returned.
+
+
+### `client.createCabal ()`
+
+Create a new cabal. Returns a promise that resolves into a `CabalDetails` instance.
+
+### `client.addCabal (key, cb)`
+
+Add/load the cabal at `key`. Returns a promise that resolves into a `CabalDetails` instance.`cb` is called when the
+cabal  has been initialized.
+
+### `client.focusCabal (key)`
+
+Focus the cabal at `key`, used when you want to switch from one open cabal to another.
+
+### `client.removeCabal (key)`
+
+Remove the cabal `key`. Destroys everything related to it (the data is however still persisted to disk, fret not!).
+
+### `client.getMessages (opts, cb, cabal = this.currentCabal)`
+Returns a list of messages according to `opts`. If `cb` is null, a Promise is returned.
+
+#### `opts` 
+```
+    opts.olderThan // timestamp in epoch time. we want to get messages that are *older* than this ts
+    opts.newerThan // timestamp in epoch time. we want to get messages that are *newer* than this ts
+    opts.amount // amount of messages to get
+    opts.channel // channel to get messages from. defaults to currently focused channel
+```
+
+### `client.getCabalKeys ()`
+
+Returns a list of cabal keys, one for each open cabal.
+
+### `client.getCurrentCabal ()`
+
+Get the current cabal. Returns a `CabalDetails` instance.
+
+### `client._getCabalByKey (key)`
+
+Returns the `cabal-core` instance corresponding to the cabal key `key`. `key` is scrubbed internally.
+
+### `client.cabalToDetails (cabal = this.currentCabal)`
 
 Returns a `CabalDetails` instance for the passed in `cabal-core` instance.
 
-### `addStatusMessage (message, channel, cabal = this.currentCabal)`
+### `client.addStatusMessage (message, channel, cabal = this.currentCabal)`
 
 Add a status message, displayed client-side only, to the specified channel and cabal. If no cabal is specified, the currently focused cabal is used. 
 
-### `clearStatusMessages (channel, cabal = this.currentCabal)`
+### `client.getNumberUnreadMessages (channel, cabal = this.currentCabal)`
+
+Returns the number of unread messages for `channel`.
+
+### `client.getNumberMentions (channel, cabal = this.currentCabal)`
+
+Returns the number of mentions in `channel`.
+
+### `client.getMentions (channel, cabal = this.currentCabal)`
+
+Returns a list of messages that triggered a mention in channel.
+
+### `client.focusChannel (channel, keepUnread = false, cabal = this.currentCabal)`
+
+Focus a channel. This clears the read state unless `keepUnread` is set to true. Emits an update.
+
+### `client.unfocusChannel (channel, newChannel, cabal = this.currentCabal)`
+
+Unfocus a channel, effectively closing it. If `newChannel` is specified, it will be opened instead. Usually, what you do
+is you just use `focusChannel`, as that handles closing of the previously open channel for you.
+
+### `client.clearStatusMessages (channel, cabal = this.currentCabal)`
 
 Clear status messages for the specified channel.
 
-### `getUsers (cabal = this.currentCabal)`
+### `client.getUsers (cabal = this.currentCabal)`
 
 Returns a list of all the users for the specified cabal. If no cabal is specified, the currently focused cabal is used. 
 
-### `getChannels (cabal = this.currentCabal)`
+### `client.getChannels (cabal = this.currentCabal)`
 
 Returns a list of all channels for the specified cabal. If no cabal is specified, the currently focused cabal is used. 
 
-### `getJoinedChannels (cabal = this.currentCabal)`
+### `client.getJoinedChannels (cabal = this.currentCabal)`
 
 Returns a list of channels the user has joined for the specified cabal. If no cabal is specified, the currently focused cabal is used. 
 
-### client.getUnreadMessages(channel, cb)
+### `client.getCurrentChannel ()`
 
-Return an array of all unread messages in a channel.
+Returns the currently focused channel name.
 
-### client.openChannel(channel, cb)
+### `client.markChannelRead (channel, cabal = this.currentCabal)`
 
-Start watching the channel named `channel`. Its contents default to being 'read'
-up until now.
+Mark the channel as read.
 
-### client.closeChannel(channel, cb)
-
-Stop watching the channel named `channel`.
-
-### client.markChannelRead(channel, cb)
-
-Mark the contents of `channel` up to now as read.
-
-A client will probably call this whenever the user selects a channel to view.
-
-### client.on('message', function (channel, msg) {})
-
-Event fires when a new message arrives since `client` was created. It is not
-fired for messages processed in the past.
 
 ## Install
 
