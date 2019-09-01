@@ -7,6 +7,7 @@ const memdb = require('memdb')
 const level = require('level')
 const path = require('path')
 const mkdirp = require("mkdirp")
+const os = require("os")
 
 class Client {
   constructor (opts) {
@@ -41,6 +42,10 @@ class Client {
     return key.replace('cabal://', '').replace('cbl://', '').replace('dat://', '').replace(/\//g, '')
   }
 
+  static getCabalDirectory () {
+    return path.join(os.homedir(), '.cabal', `v${Client.getDatabaseVersion()}`)
+  }
+
   resolveName (name, cb) {
       return this.cabalDns.resolveName(name).then((key) => { 
           if (!cb) return Client.scrubKey(key)
@@ -57,8 +62,9 @@ class Client {
       let cabalPromise
       if (typeof key === 'string') {
           cabalPromise = this.resolveName(key).then((resolvedKey) => {
-            const {temp, dbdir} = this.config
-            const storage = temp ? ram : dbdir + resolvedKey
+            let {temp, dbdir} = this.config
+            dbdir = dbdir || path.join(Client.getCabalDirectory(), "archives")
+            const storage = temp ? ram : path.join(dbdir, resolvedKey)
             if (!temp) try { mkdirp.sync(path.join(dbdir, resolvedKey, 'views')) } catch (e) {}
             var db = temp ? memdb() : level(path.join(dbdir, resolvedKey, 'views'))
             var cabal = Cabal(storage, resolvedKey, {db: db, maxFeeds: this.maxFeeds})
