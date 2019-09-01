@@ -27,5 +27,5 @@
     "tape": "~4.9.1",
     "standard": "~12.0.0"
   },
-  "license": "ISC"
+  "license": "AGPL-3.0-or-later"
 }
