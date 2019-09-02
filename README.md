@@ -295,8 +295,8 @@ Leave a joined channel. This publishes a message announcing that you have left t
 #### `getUsers()`
 Returns an JSON object of all of the users in this cabal. Each key is the public key of its corresponding user.
 
-#### `details.on('update', cb)
-The event emitted when anything has changed with this cabal details. You will want to rerender when it has been emitted.
+#### `details.on('update', cb)`
+The event emitted when anything has changed with this instance of `CabalDetails`. You will typically want to rerender when it has been emitted.
 
 #### `_destroy ()`
 Destroy all of the listeners associated with this details instance
