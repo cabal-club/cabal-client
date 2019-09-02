@@ -181,7 +181,7 @@ class Client {
     this.cabalToDetails(cabal).on('update', listener)
   }
 
-  unsubscribe (listener, cabal = this.currentCabal, listener) {
+  unsubscribe (listener, cabal = this.currentCabal) {
     this.cabalToDetails(cabal).removeListener('update', listener)
   }
 
