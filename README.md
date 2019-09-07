@@ -29,7 +29,7 @@ const client = new Client({
   persistentCache: {
     // localCache is something you have to implement yourself
     read: async function (name, err) {
-      if (name in config.cache) {
+      if (name in localCache) {
         var cache = localCache[name]
         if (cache.expiresAt < Date.now()) { // if ttl has expired: warn, but keep using
           console.error(`The TTL for ${name} has expired`)
@@ -83,10 +83,9 @@ barebones implementation for virtual channels, which currently is only the `!sta
 ```js
 var Client = require('cabal-client')
 ```
----
 
 ### `client.js` methods
-#### var client = Client(opts)
+#### `var client = new Client(opts)`
 
 Create a client instance from which to manage multiple [`cabal-core`](https://github.com/cabal-club/cabal-core/) instances.
 
@@ -134,8 +133,8 @@ Create a new cabal. Returns a promise that resolves into a `CabalDetails` instan
 
 #### `client.addCabal (key, cb)`
 
-Add/load the cabal at `key`. Returns a promise that resolves into a `CabalDetails` instance.`cb` is called when the
-cabal  has been initialized.
+Add/load the cabal at `key`. Returns a promise that resolves into a `CabalDetails` instance. `cb` is called when the
+cabal has been initialized.
 
 #### `client.focusCabal (key)`
 
