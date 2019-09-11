@@ -217,6 +217,7 @@ class CabalDetails extends EventEmitter {
         if (err || !user) { return }
         this.user = user
         // restore `user.local` and `user.online` as they don't come from cabal-core
+        this.user.key = lkey
         this.user.local = true
         this.user.online = true
         this.users[lkey] = this.user
