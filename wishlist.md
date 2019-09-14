@@ -1,13 +1,10 @@
 # cabal-client feature wishlist
 
-- join / leave channels
-- unread marker
-- threaded messages
-- colorized nicks
-- mute/unmute user
-- date change messages
-- read config files
-- set an alias/name for a cabal key
-- count of replications for a message
-- events around joining/updating users
+- **done** join / leave channels
+- **done** unread marker
+- **done** date change messages
 - storage?: levelup/abstract-access-storage/abstract-blob-store/random-access-storage
+- set an alias/name for a cabal key
+- read config files
+- mute/unmute user
+- count of replications for a message
