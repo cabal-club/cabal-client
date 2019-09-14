@@ -59,7 +59,7 @@ class Client {
   }
 
   addCabal (key, cb) {
-      if (!cb) cb = function noop () {}
+      if (!cb || typeof cb !== "function") cb = function noop () {}
       let cabalPromise
       let dnsFailed = false
       if (typeof key === 'string') {
@@ -89,8 +89,10 @@ class Client {
           cabalPromise.then((cabal) => {
               if (dnsFailed) return rej()
               cabal = this._coerceToCabal(cabal)
-              this.currentCabal = cabal
               cabal.ready(() => {
+                  if (!this.currentCabal) {
+                    this.currentCabal = cabal
+                  }
                   const details = new CabalDetails(cabal, cb)
                   this.cabals.set(cabal, details)
                   cabal.swarm()
@@ -142,6 +144,7 @@ class Client {
   }
 
   cabalToDetails (cabal = this.currentCabal) {
+    if (!cabal) { return null }
     const details = this.cabals.get(cabal)
     if (details) {
       return details
