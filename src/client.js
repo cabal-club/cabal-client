@@ -1,17 +1,25 @@
 const Cabal = require('cabal-core')
 const CabalDetails = require('./cabal-details')
 const crypto = require('hypercore-crypto')
-const DatDns = require("dat-dns")
+const DatDns = require('dat-dns')
 const ram = require('random-access-memory')
 const memdb = require('memdb')
 const level = require('level')
 const path = require('path')
-const mkdirp = require("mkdirp")
-const os = require("os")
+const mkdirp = require('mkdirp')
+const os = require('os')
 
 class Client {
   constructor (opts) {
     if (!(this instanceof Client)) return new Client(opts)
+    if (!opts) {
+      opts = {
+        config: {
+          temp: true,
+          dbdir: null
+        }
+      }
+    }
     // This is redundant, but we might want to keep the cabal map around
     // in the case the user has access to cabal instances
     this._keyToCabal = {}
@@ -22,10 +30,10 @@ class Client {
     this.maxFeeds = opts.maxFeeds || 1000
 
     let cabalDnsOpts = {
-        hashRegex: /^[0-9a-f]{64}?$/i,
-        recordName: 'cabal',
-        protocolRegex: /^cabal:\/\/([0-9a-f]{64})/i,
-        txtRegex: /^"?cabalkey=([0-9a-f]{64})"?$/i,
+      hashRegex: /^[0-9a-f]{64}?$/i,
+      recordName: 'cabal',
+      protocolRegex: /^cabal:\/\/([0-9a-f]{64})/i,
+      txtRegex: /^"?cabalkey=([0-9a-f]{64})"?$/i
     }
     // also takes opts.persistentCache which has a read and write function
     //   read: async function ()   // aka cache lookup function
@@ -38,6 +46,10 @@ class Client {
     return Cabal.databaseVersion
   }
 
+  static generateKey () {
+    return crypto.keyPair().publicKey.toString('hex')
+  }
+
   static scrubKey (key) {
     return key.replace('cabal://', '').replace('cbl://', '').replace('dat://', '').replace(/\//g, '')
   }
@@ -47,59 +59,60 @@ class Client {
   }
 
   resolveName (name, cb) {
-      return this.cabalDns.resolveName(name).then((key) => { 
-          if (key === null) return null
-          if (!cb) return Client.scrubKey(key)
-          cb(Client.scrubKey(key)) 
-      })
+    return this.cabalDns.resolveName(name).then((key) => {
+      if (key === null) return null
+      if (!cb) return Client.scrubKey(key)
+      cb(Client.scrubKey(key))
+    })
   }
 
   createCabal () {
-    return this.addCabal(crypto.keyPair().publicKey.toString('hex'))
+    const key = Client.generateKey()
+    return this.addCabal(key)
   }
 
   addCabal (key, cb) {
-      if (!cb || typeof cb !== "function") cb = function noop () {}
-      let cabalPromise
-      let dnsFailed = false
-      if (typeof key === 'string') {
-          cabalPromise = this.resolveName(key).then((resolvedKey) => {
-            if (resolvedKey === null) {
-                dnsFailed = true
-                return
-            }
-            let {temp, dbdir} = this.config
-            dbdir = dbdir || path.join(Client.getCabalDirectory(), "archives")
-            const storage = temp ? ram : path.join(dbdir, resolvedKey)
-            if (!temp) try { mkdirp.sync(path.join(dbdir, resolvedKey, 'views')) } catch (e) {}
-            var db = temp ? memdb() : level(path.join(dbdir, resolvedKey, 'views'))
-            var cabal = Cabal(storage, resolvedKey, {db: db, maxFeeds: this.maxFeeds})
-            this._keyToCabal[resolvedKey] = cabal
-            return cabal
-          })
-      } else {
-          cabalPromise = new Promise((res, rej) => {
-            // a cabal instance was passed in
-            var cabal = key
-            this._keyToCabal[cabal.key] = cabal
-            res(cabal)
-          })
-      }
-      return new Promise((res, rej) => {
-          cabalPromise.then((cabal) => {
-              if (dnsFailed) return rej()
-              cabal = this._coerceToCabal(cabal)
-              cabal.ready(() => {
-                  if (!this.currentCabal) {
-                    this.currentCabal = cabal
-                  }
-                  const details = new CabalDetails(cabal, cb)
-                  this.cabals.set(cabal, details)
-                  cabal.swarm()
-                  this.getCurrentCabal()._emitUpdate()
-                  res(details)
-              })
-          })
+    if (!cb || typeof cb !== 'function') cb = function noop () {}
+    let cabalPromise
+    let dnsFailed = false
+    if (typeof key === 'string') {
+      cabalPromise = this.resolveName(key).then((resolvedKey) => {
+        if (resolvedKey === null) {
+          dnsFailed = true
+          return
+        }
+        let {temp, dbdir} = this.config
+        dbdir = dbdir || path.join(Client.getCabalDirectory(), 'archives')
+        const storage = temp ? ram : path.join(dbdir, resolvedKey)
+        if (!temp) try { mkdirp.sync(path.join(dbdir, resolvedKey, 'views')) } catch (e) {}
+        var db = temp ? memdb() : level(path.join(dbdir, resolvedKey, 'views'))
+        var cabal = Cabal(storage, resolvedKey, {db: db, maxFeeds: this.maxFeeds})
+        this._keyToCabal[resolvedKey] = cabal
+        return cabal
+      })
+    } else {
+      cabalPromise = new Promise((resolve, reject) => {
+        // a cabal instance was passed in
+        var cabal = key
+        this._keyToCabal[cabal.key] = cabal
+        resolve(cabal)
+      })
+    }
+    return new Promise((resolve, reject) => {
+      cabalPromise.then((cabal) => {
+        if (dnsFailed) return reject(new Error('dns failed to resolve'))
+        cabal = this._coerceToCabal(cabal)
+        cabal.ready(() => {
+          if (!this.currentCabal) {
+            this.currentCabal = cabal
+          }
+          const details = new CabalDetails(cabal, cb)
+          this.cabals.set(cabal, details)
+          cabal.swarm()
+          this.getCurrentCabal()._emitUpdate()
+          resolve(details)
+        })
+      })
     })
   }
 
@@ -222,7 +235,7 @@ class Client {
 
   focusChannel (channel, keepUnread = false, cabal = this.currentCabal) {
     this.cabalToDetails(cabal).focusChannel(channel, keepUnread)
-    var details = this.cabalToDetails(cabal)._emitUpdate()
+    this.cabalToDetails(cabal)._emitUpdate()
   }
 
   unfocusChannel (channel, newChannel, cabal = this.currentCabal) {
