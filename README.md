@@ -118,6 +118,9 @@ Returns a 64 bit hash if passed in e.g. `cabal://1337..7331` -> `1337..7331`.
 
 Returns a string path of where all of the cabals are stored on the hard drive.
 
+#### `Client.generateKey()`
+
+Returns a 64 character hex string i.e. a newly generated cabal key. Useful if you want to programmatically create a new cabal as part of a shell pipeline.
 
 #### `client.resolveName (name, cb)`
 
