@@ -202,7 +202,17 @@ class Client {
   }
 
   /**
-   * Returns a list of cabal keys, one for each open cabal. 
+   * Returns the details of a cabal for the given key.
+   * @returns {CabalDetails}
+   */
+  getDetails (key) {
+    const cabal = this._coerceToCabal(key)
+    if (!cabal) { return null }
+    return this.cabalToDetails(cabal)
+  }
+
+  /**
+   * Returns a list of cabal keys, one for each open cabal.
    * @returns {string[]}
    */
   getCabalKeys () {
