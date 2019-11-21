@@ -1,11 +1,12 @@
 
 # cabal-client
-`cabal-client` is a new type of client library for cabal (chat) clients.
+`cabal-client` is a new type of client library for cabal chat clients.
 
-The goal: new chat clients can now be implemented using _only_ this library, without having to mess around with
-[`cabal-core`](https://github.com/cabal-club/cabal-core/) itself.
+New chat clients can be implemented using _only_ this library, without having
+to mess around with [`cabal-core`](https://github.com/cabal-club/cabal-core/)
+anymore.
 
-Things which this library makes possible:
+Some of its features:
 * consolidates logic common to all chat clients
 * leaving and joining of channels
 * virtual messages (such as status messages) and virtual channels (currently only the `!status` channel)
@@ -22,31 +23,8 @@ See [`cabal-cli`](https://github.com/cabal-club/cabal-cli/) for an example clien
 var Client = require('cabal-client')
 
 const client = new Client({
-  maxFeeds: maxFeeds,
   config: {
-    dbdir: archivesdir,
-    temp: args.temp
-  },
-  // persistent caching means that we cache resolved DNS shortnames, allowing access to their cabals while offline
-  persistentCache: {
-    // localCache is something you have to implement yourself
-    read: async function (name, err) {
-      if (name in localCache) {
-        var cache = localCache[name]
-        if (cache.expiresAt < Date.now()) { // if ttl has expired: warn, but keep using
-          console.error(`The TTL for ${name} has expired`)
-        }
-        return cache.key
-      }
-      // dns record wasn't found online and wasn't in the cache
-      return null
-    },
-    write: async function (name, key, ttl) {
-      var expireOffset = +(new Date(ttl * 1000)) // convert to epoch time
-      var expiredTime = Date.now() + expireOffset
-      if (!localCache) localCache = {}
-      localCache[name] = { key: key, expiresAt: expiredTime }
-    }
+    dbdir: '/tmp/cabals'
   }
 })
 
