@@ -197,7 +197,7 @@ class Client {
     details._destroy()
 
     // burn everything we know about the cabal
-    this._keyToCabal[key] = null
+    delete this._keyToCabal[key]
     return this.cabals.delete(cabal)
   }
 
