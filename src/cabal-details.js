@@ -161,8 +161,8 @@ class CabalDetails extends EventEmitter {
 
   /**
    * Add a status message, visible locally only.
-   * @param {string} message 
-   * @param {string} [channel=this.chname] 
+   * @param {object} message
+   * @param {string} [channel=this.chname]
    */
   addStatusMessage(message, channel=this.chname) {
     this.channels[channel].addVirtualMessage(message)

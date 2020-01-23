@@ -260,12 +260,12 @@ class Client {
   /**
    * Add a status message, displayed client-side only, to the specified channel and cabal. 
    * If no cabal is specified, the currently focused cabal is used. 
-   * @param {string} message 
-   * @param {string} channel 
+   * @param {object} message
+   * @param {string} channel
    * @param {Cabal} [cabal=this.currentCabal]
    */
   addStatusMessage (message, channel, cabal = this.currentCabal) {
-    this.cabalToDetails(cabal).addStatusMessage(message)
+    this.cabalToDetails(cabal).addStatusMessage(message, channel)
   }
 
   /**

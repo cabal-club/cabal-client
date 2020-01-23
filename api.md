@@ -174,7 +174,7 @@ If no cabal is specified, the currently focused cabal is used.
 
 **Params**
 
-- message <code>string</code>
+- message <code>object</code>
 - channel <code>string</code>
 - *cabal* <code>Cabal</code> <code> = this.currentCabal</code>
 
@@ -536,7 +536,7 @@ Add a status message, visible locally only.
 
 **Params**
 
-- message <code>string</code>
+- message <code>object</code>
 - *channel* <code>string</code> <code> = &quot;this.chname&quot;</code>
 
 
