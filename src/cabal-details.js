@@ -109,6 +109,27 @@ class CabalDetails extends EventEmitter {
     this._emitUpdate()
   }
 
+
+  /**
+   *
+   * @param {object} msg  the full message
+   * @param {function} [opts] options for cabal.publish
+   * @param {function} [cb] callback
+   */
+  publishFile (msg, opts, cb) {
+    if (!cb) {
+      cb = noop
+    }
+    if (!msg.content.channel) {
+      msg.content.channel = this.chname
+    }
+    if (!msg.type) msg.type = 'chat/file';
+    this._cabal.publish(msg, opts, (err, m) => {
+      this._emitUpdate()
+      cb(err, m)
+    })
+  }
+  
   /**
    * Publish a new channel topic to `channel`. 
    * @param {string} [channel=this.chname] 
