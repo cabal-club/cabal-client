@@ -496,9 +496,10 @@ for the full list of options.
 **Example**  
 ```js
 cabalDetails.publishMessage({
-  type: 'chat/text',
+  type: 'chat/files',
   content: {
-    text: 'hello world',
+    datKey: 'key'
+    filename: 'hello world',
     channel: 'cabal-dev'
   }
 })
