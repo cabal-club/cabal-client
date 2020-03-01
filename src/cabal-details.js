@@ -345,11 +345,22 @@ class CabalDetails extends EventEmitter {
    * @prop {string} author.key - Public key of the user 
    * @prop {boolean} author.local - True if user is the local user (i.e. at the keyboard and not someone else in the cabal)
    * @prop {boolean} author.online - True if the user is currently online
-   * @prop {object} message - The message that was posted
+   * @prop {object} message - The message that was posted. See `cabal-core` for more complete message documentation.
    * @prop {string} message.key - Public key of the user posting the message (again, it's a quirk)
    * @prop {number} message.seq - Sequence number of the message in the user's append-only log 
    * @prop {object} message.value - Message content, see `cabal-core` documentation for more information.
-   * @prop {object} message.directMention - True if the message contained a direct mention
+   *    
+   */
+
+  /**
+   *
+   * Fires when the local user has published a new message
+   * @event CabalDetails#publish-message
+   * @type {object}
+   * @prop {object} message - The message that was posted. See `cabal-core` for more complete message documentation.
+   * @prop {string} message.type - Message type that was posted, e.g. `chat/text` or `chat/emote` 
+   * @prop {string} message.content - Message contents, e.g. channel and text if `chat/text`
+   * @prop {number} message.timestamp - The time the message was published
    *    
    */
    
