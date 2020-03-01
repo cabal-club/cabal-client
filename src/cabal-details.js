@@ -18,6 +18,21 @@ class CabalDetails extends EventEmitter {
    * 
    * @constructor
    * @fires CabalDetails#update
+   * @fires CabalDetails#init
+   * @fires CabalDetails#user-updated
+   * @fires CabalDetails#new-channel
+   * @fires CabalDetails#new-message
+   * @fires CabalDetails#publish-message
+   * @fires CabalDetails#publish-nick
+   * @fires CabalDetails#status-message
+   * @fires CabalDetails#topic
+   * @fires CabalDetails#channel-focus
+   * @fires CabalDetails#channel-join
+   * @fires CabalDetails#channel-leave
+   * @fires CabalDetails#cabal-focus
+   * @fires CabalDetails#started-peering
+   * @fires CabalDetails#stoppped-peering
+   * @fires CabalDetails#update
    * @param {*} cabal 
    * @param {function} done the function to be called after the cabal is initialized
    */
@@ -295,26 +310,138 @@ class CabalDetails extends EventEmitter {
     return Object.assign({}, this.users)
   }
 
-  /** Emits event updates with different types and corresponding payloads. Listen for these events to update state.
-  * @example
-  * events and payloads are documented as `<type>`: `<payload>|empty`:
-  * `init`: empty
-  * `user-updated`: `{ key, user }`
-  * `new-channel`: `{ channel }`
-  * `new-message`: `{ channel, author: { name, key, local, online }, message }` note: includes chat/topic, chat/emote, chat/text
-  * `publish-message`: `{ message, timestamp }`
-  * `publish-nick`: `{ name }`
-  * `status-message`: `{ channel, message }`
-  * `topic`: `{ channel, topic }`
-  * `channel-focus`: `{ channel }`
-  * `channel-join`: `{ key, channel, isLocal }`
-  * `channel-leave`: `{ key, channel, isLocal }`
-  * `cabal-focus`: `{ cabalkey }`
-  * `started-peering`: { key, name }`
-  * `stoppped-peering`: { key, name }`
-  * `update`: empty - generic update from previous iteration, signals that something changed
-  *
-  */
+  /**
+   *
+   * Fires when the cabal has finished initialization
+   * @event CabalDetails#init
+   */
+
+  /**
+   *
+   * Fires when a user has updated their nickname
+   * @event CabalDetails#user-updated
+   * @type {object}
+   * @property {string} key - Public key of the updated user
+   * @property {object} user - Object containing user information 
+   * @prop {string} user.name - Current nickname of the updated user
+   */
+
+  /**
+   *
+   * Fires when a new channel has been created
+   * @event CabalDetails#new-channel
+   * @type {object}
+   * @property {string} channel - Name of the created channel
+   */
+
+  /**
+   *
+   * Fires when a new message has been posted
+   * @event CabalDetails#new-message
+   * @type {object}
+   * @property {string} channel - Name of the channel the message was posted to
+   * @property {object} author - Object containing the user that posted the message
+   * @prop {string} author.name - Nickname of the user 
+   * @prop {string} author.key - Public key of the user 
+   * @prop {boolean} author.local - True if user is the local user (i.e. at the keyboard and not someone else in the cabal)
+   * @prop {boolean} author.online - True if the user is currently online
+   * @prop {object} message - The message that was posted
+   * @prop {string} message.key - Public key of the user posting the message (again, it's a quirk)
+   * @prop {number} message.seq - Sequence number of the message in the user's append-only log 
+   * @prop {object} message.value - Message content, see `cabal-core` documentation for more information.
+   * @prop {object} message.directMention - True if the message contained a direct mention
+   *    
+   */
+   
+  /**
+   *
+   * Fires when the local user has published a new nickname
+   * @event CabalDetails#publish-nick
+   * @type {object}
+   * @property {string} name - The nickname that was published
+   */
+   
+  /**
+   *
+   * Fires when a status message has been created. These are only visible by the local user.
+   * @event CabalDetails#status-message
+   * @type {object}
+   * @property {string} channel - Name of the channel the message was published to 
+   * @prop {object} message
+   * @prop {number} message.timestamp - Publish timestamp
+   * @prop {string} message.text - The published status message contents
+   */
+   
+  /**
+   *
+   * Fires when a new channel topic has been set
+   * @event CabalDetails#topic
+   * @type {object}
+   * @property {string} channel - Name of the channel with the new topic
+   * @property {string} topic - Name of the channel with the new topic
+   */
+
+  /**
+   *
+   * Fires when the user has focused (i.e. switched to) a new channel
+   * @event CabalDetails#channel-focus
+   * @type {object}
+   * @property {string} channel - Name of the focused channel
+   */
+
+  /**
+   *
+   * Fires when a user has joined a channel
+   * @event CabalDetails#channel-join
+   * @type {object}
+   * @property {string} channel - Name of the joined channel
+   * @property {string} key - Public key of the user joining the channel
+   * @property {boolean} isLocal - True if it was the local user joining a new channel
+   */
+
+  /**
+   *
+   * Fires when a user has leaveed a channel
+   * @event CabalDetails#channel-leave
+   * @type {object}
+   * @property {string} channel - Name of the leaved channel
+   * @property {string} key - Public key of the user leaving the channel
+   * @property {boolean} isLocal - True if it was the local user leaving a new channel
+   */
+
+  /**
+   *
+   * Fires when another cabal has been focused
+   * @event CabalDetails#cabal-focus
+   * @type {object}
+   * @property {string} key - Key of the focused cabal
+   */
+
+  /**
+   *
+   * Fires when the local user has connected directly with another peer
+   * @event CabalDetails#started-peering
+   * @type {object}
+   * @property {string} key - Public key of the other peer
+   * @property {string} name- Name of the other peer
+   */
+
+  /**
+   *
+   * Fires when the local user has disconnected with another peer
+   * @event CabalDetails#stopped-peering
+   * @type {object}
+   * @property {string} key - Public key of the other peer
+   * @property {string} name- Name of the other peer
+   */
+
+  
+  /**
+   *
+   * Fires when any kind of change has happened to the cabal.
+   * @event CabalDetails#update
+   */
+
   _emitUpdate(type, payload=null) {
     this.emit('update', this)
     if (type) {

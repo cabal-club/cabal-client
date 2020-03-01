@@ -179,7 +179,7 @@ class Client {
     }
     this.currentCabal = cabal
     let details = this.cabalToDetails(cabal)
-    details._emitUpdate("cabal-focus", { cabalkey: key })
+    details._emitUpdate("cabal-focus", { key })
     return details
   }
 
