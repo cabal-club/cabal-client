@@ -32,7 +32,6 @@ class CabalDetails extends EventEmitter {
    * @fires CabalDetails#cabal-focus
    * @fires CabalDetails#started-peering
    * @fires CabalDetails#stopped-peering
-   * @fires CabalDetails#update
    * @param {*} cabal 
    * @param {function} done the function to be called after the cabal is initialized
    */
