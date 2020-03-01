@@ -57,7 +57,7 @@ class CabalDetails extends EventEmitter {
     if (mention) this.channels[channel].addMention(message)
     this._emitUpdate("new-message", { 
         channel,
-        author: this.users[message.key] || message.key, 
+        author: this.users[message.key] || { key: message.key, name: message.key, local: false, online: false}, 
         message: Object.assign({}, message) 
     })
   }
@@ -295,7 +295,7 @@ class CabalDetails extends EventEmitter {
     return Object.assign({}, this.users)
   }
 
-  /** emits event updates with different types and corresponding payloads. 
+  /** Emits event updates with different types and corresponding payloads. Listen for these events to update state.
   * @example
   * events and payloads are documented as `<type>`: `<payload>|empty`:
   * `init`: empty

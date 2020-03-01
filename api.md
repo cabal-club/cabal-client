@@ -50,7 +50,7 @@
 <a name="new_Client_new"></a>
 
 ### new Client([opts])
-Create a client instance from which to manage multiple
+Create a client instance from which to manage multiple 
 [`cabal-core`](https://github.com/cabal-club/cabal-core/) instances.
 
 **Params**
@@ -435,6 +435,7 @@ Returns a string path of where all of the cabals are stored on the hard drive.
     * [.joinChannel(channel)](#CabalDetails+joinChannel)
     * [.leaveChannel(channel)](#CabalDetails+leaveChannel)
     * [.getUsers()](#CabalDetails+getUsers) ⇒ <code>object</code>
+    * [._emitUpdate()](#CabalDetails+_emitUpdate)
     * [._destroy()](#CabalDetails+_destroy)
     * ["update"](#CabalDetails+event_update)
 
@@ -629,6 +630,33 @@ that you have left the channel.
 ### cabalDetails.getUsers() ⇒ <code>object</code>
 **Returns**: <code>object</code> - all of the users in this cabal. Each key is the public key of its 
 corresponding user.  
+
+* * *
+
+<a name="CabalDetails+_emitUpdate"></a>
+
+### cabalDetails.\_emitUpdate()
+Emits event updates with different types and corresponding payloads. Listen for these events to update state.
+
+**Example**  
+```js
+events and payloads are documented as `<type>`: `<payload>|empty`:
+`init`: empty
+`user-updated`: `{ key, user }`
+`new-channel`: `{ channel }`
+`new-message`: `{ channel, author: { name, key, local, online }, message }` note: includes chat/topic, chat/emote, chat/text
+`publish-message`: `{ message, timestamp }`
+`publish-nick`: `{ name }`
+`status-message`: `{ channel, message }`
+`topic`: `{ channel, topic }`
+`channel-focus`: `{ channel }`
+`channel-join`: `{ key, channel, isLocal }`
+`channel-leave`: `{ key, channel, isLocal }`
+`cabal-focus`: `{ cabalkey }`
+`started-peering`: { key, name }`
+`stoppped-peering`: { key, name }`
+`update`: empty - generic update from previous iteration, signals that something changed
+```
 
 * * *
 
