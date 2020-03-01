@@ -98,7 +98,7 @@ class CabalDetails extends EventEmitter {
     }
     if (!msg.type) msg.type = "chat/text"
       this._cabal.publish(msg, opts, (err, m) => {
-          this._emitUpdate("publish-message", { msg })
+          this._emitUpdate("publish-message", { message: msg })
           cb(err, m)
       })
   }
@@ -111,7 +111,7 @@ class CabalDetails extends EventEmitter {
   publishNick(nick, cb) {
     this._cabal.publishNick(nick, cb)
     this.user.name = nick
-    this._emitUpdate("publish-nick", { nick })
+    this._emitUpdate("publish-nick", { name: nick })
   }
 
   /**
@@ -299,18 +299,17 @@ class CabalDetails extends EventEmitter {
   * @example
   * events and payloads are documented as `<type>`: `<payload>|empty`:
   * `init`: empty
-  * `nick-change`: `{ key, newNick, oldNick }`
   * `user-updated`: `{ key, user }`
   * `new-channel`: `{ channel }`
   * `new-message`: `{ channel, author: { name, key, local, online }, message }` note: includes chat/topic, chat/emote, chat/text
-  * `publish-message`: `{ msg, timestamp }`
-  * `publish-nick`: `{ nick }`
+  * `publish-message`: `{ message, timestamp }`
+  * `publish-nick`: `{ name }`
   * `status-message`: `{ channel, message }`
   * `topic`: `{ channel, topic }`
   * `channel-focus`: `{ channel }`
-  * `channel-join`: `{ userKey, channel, isLocal }`
-  * `channel-leave`: `{ userKey, channel, isLocal }`
-  * `cabal-focus`: `{ cabalKey }`
+  * `channel-join`: `{ key, channel, isLocal }`
+  * `channel-leave`: `{ key, channel, isLocal }`
+  * `cabal-focus`: `{ cabalkey }`
   * `started-peering`: { key, name }`
   * `stoppped-peering`: { key, name }`
   * `update`: empty - generic update from previous iteration, signals that something changed
@@ -416,7 +415,7 @@ this.registerListener(cabal.memberships.events, 'add', (channel, user) => {
     this.channels[channel] = new ChannelDetails(this._cabal, channel)
   }
   this.channels[channel].addMember(user)
-  this._emitUpdate("channel-join", { channel, userKey: user, isLocal: user === this.user.key })
+  this._emitUpdate("channel-join", { channel, key: user, isLocal: user === this.user.key })
 })
 
 // notify when a user has left a channel
@@ -425,7 +424,7 @@ this.registerListener(cabal.memberships.events, 'remove', (channel, user) => {
     this.channels[channel] = new ChannelDetails(this._cabal, channel)
   }
   this.channels[channel].removeMember(user)
-  this._emitUpdate("channel-leave", { channel, userKey: user, isLocal: user === this.user.key })
+  this._emitUpdate("channel-leave", { channel, key: user, isLocal: user === this.user.key })
 })
 
 // register to be notified of new channels as they are created
@@ -471,7 +470,7 @@ cabal.users.getAll((err, users) => {
     })
     if (!found) {
       this.users[key] = {
-        key: key,
+        key,
         online: true
       }
     }
