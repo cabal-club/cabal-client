@@ -2,7 +2,7 @@
   "name": "cabal-client",
   "description": "helper module for cabal clients",
   "author": "Cabal Club",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "repository": {
     "url": "git://github.com/cabal-club/cabal-client.git"
   },
