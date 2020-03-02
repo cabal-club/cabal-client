@@ -162,7 +162,6 @@ class Client {
           const details = new CabalDetails(cabal, cb)
           this.cabals.set(cabal, details)
           cabal.swarm()
-          this.getCurrentCabal()._emitUpdate()
           resolve(details)
         })
       })
@@ -179,7 +178,9 @@ class Client {
       return false
     }
     this.currentCabal = cabal
-    return this.cabalToDetails(cabal)
+    let details = this.cabalToDetails(cabal)
+    details._emitUpdate("cabal-focus", { key })
+    return details
   }
 
   /**
@@ -398,7 +399,6 @@ class Client {
    */
   focusChannel (channel, keepUnread = false, cabal = this.currentCabal) {
     this.cabalToDetails(cabal).focusChannel(channel, keepUnread)
-    this.cabalToDetails(cabal)._emitUpdate()
   }
 
   /**

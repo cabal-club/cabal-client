@@ -50,7 +50,7 @@
 <a name="new_Client_new"></a>
 
 ### new Client([opts])
-Create a client instance from which to manage multiple
+Create a client instance from which to manage multiple 
 [`cabal-core`](https://github.com/cabal-club/cabal-core/) instances.
 
 **Params**
@@ -415,7 +415,7 @@ Returns a string path of where all of the cabals are stored on the hard drive.
 <a name="CabalDetails"></a>
 
 ## CabalDetails
-**Emits**: [<code>update</code>](#CabalDetails+event_update)  
+**Emits**: [<code>update</code>](#CabalDetails+event_update), [<code>init</code>](#CabalDetails+event_init), [<code>user-updated</code>](#CabalDetails+event_user-updated), [<code>new-channel</code>](#CabalDetails+event_new-channel), [<code>new-message</code>](#CabalDetails+event_new-message), [<code>publish-message</code>](#CabalDetails+event_publish-message), [<code>publish-nick</code>](#CabalDetails+event_publish-nick), [<code>status-message</code>](#CabalDetails+event_status-message), [<code>topic</code>](#CabalDetails+event_topic), [<code>channel-focus</code>](#CabalDetails+event_channel-focus), [<code>channel-join</code>](#CabalDetails+event_channel-join), [<code>channel-leave</code>](#CabalDetails+event_channel-leave), [<code>cabal-focus</code>](#CabalDetails+event_cabal-focus), [<code>started-peering</code>](#CabalDetails+event_started-peering), [<code>stopped-peering</code>](#CabalDetails+event_stopped-peering)  
 
 * [CabalDetails](#CabalDetails)
     * [new CabalDetails(cabal, done)](#new_CabalDetails_new)
@@ -436,6 +436,21 @@ Returns a string path of where all of the cabals are stored on the hard drive.
     * [.leaveChannel(channel)](#CabalDetails+leaveChannel)
     * [.getUsers()](#CabalDetails+getUsers) ⇒ <code>object</code>
     * [._destroy()](#CabalDetails+_destroy)
+    * ["update"](#CabalDetails+event_update)
+    * ["init"](#CabalDetails+event_init)
+    * ["user-updated"](#CabalDetails+event_user-updated)
+    * ["new-channel"](#CabalDetails+event_new-channel)
+    * ["new-message"](#CabalDetails+event_new-message)
+    * ["publish-message"](#CabalDetails+event_publish-message)
+    * ["publish-nick"](#CabalDetails+event_publish-nick)
+    * ["status-message"](#CabalDetails+event_status-message)
+    * ["topic"](#CabalDetails+event_topic)
+    * ["channel-focus"](#CabalDetails+event_channel-focus)
+    * ["channel-join"](#CabalDetails+event_channel-join)
+    * ["channel-leave"](#CabalDetails+event_channel-leave)
+    * ["cabal-focus"](#CabalDetails+event_cabal-focus)
+    * ["started-peering"](#CabalDetails+event_started-peering)
+    * ["stopped-peering"](#CabalDetails+event_stopped-peering)
     * ["update"](#CabalDetails+event_update)
 
 
@@ -653,6 +668,243 @@ Destroy all of the listeners associated with this `details` instance
 | name | <code>string</code> | The user's username |
 | key | <code>string</code> | The user's public key |
 
+
+* * *
+
+<a name="CabalDetails+event_init"></a>
+
+### "init"
+Fires when the cabal has finished initialization
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+
+* * *
+
+<a name="CabalDetails+event_user-updated"></a>
+
+### "user-updated"
+Fires when a user has updated their nickname
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| key | <code>string</code> | Public key of the updated user |
+| user | <code>object</code> | Object containing user information |
+| user.name | <code>string</code> | Current nickname of the updated user |
+
+
+* * *
+
+<a name="CabalDetails+event_new-channel"></a>
+
+### "new-channel"
+Fires when a new channel has been created
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| channel | <code>string</code> | Name of the created channel |
+
+
+* * *
+
+<a name="CabalDetails+event_new-message"></a>
+
+### "new-message"
+Fires when a new message has been posted
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| channel | <code>string</code> | Name of the channel the message was posted to |
+| author | <code>object</code> | Object containing the user that posted the message |
+| author.name | <code>string</code> | Nickname of the user |
+| author.key | <code>string</code> | Public key of the user |
+| author.local | <code>boolean</code> | True if user is the local user (i.e. at the keyboard and not someone else in the cabal) |
+| author.online | <code>boolean</code> | True if the user is currently online |
+| message | <code>object</code> | The message that was posted. See `cabal-core` for more complete message documentation. |
+| message.key | <code>string</code> | Public key of the user posting the message (again, it's a quirk) |
+| message.seq | <code>number</code> | Sequence number of the message in the user's append-only log |
+| message.value | <code>object</code> | Message content, see `cabal-core` documentation for more information. |
+
+
+* * *
+
+<a name="CabalDetails+event_publish-message"></a>
+
+### "publish-message"
+Fires when the local user has published a new message
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| message | <code>object</code> | The message that was posted. See `cabal-core` for more complete message documentation. |
+| message.type | <code>string</code> | Message type that was posted, e.g. `chat/text` or `chat/emote` |
+| message.content | <code>string</code> | Message contents, e.g. channel and text if `chat/text` |
+| message.timestamp | <code>number</code> | The time the message was published |
+
+
+* * *
+
+<a name="CabalDetails+event_publish-nick"></a>
+
+### "publish-nick"
+Fires when the local user has published a new nickname
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | The nickname that was published |
+
+
+* * *
+
+<a name="CabalDetails+event_status-message"></a>
+
+### "status-message"
+Fires when a status message has been created. These are only visible by the local user.
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| channel | <code>string</code> | Name of the channel the message was published to |
+| message | <code>object</code> |  |
+| message.timestamp | <code>number</code> | Publish timestamp |
+| message.text | <code>string</code> | The published status message contents |
+
+
+* * *
+
+<a name="CabalDetails+event_topic"></a>
+
+### "topic"
+Fires when a new channel topic has been set
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| channel | <code>string</code> | Name of the channel with the new topic |
+| topic | <code>string</code> | Name of the channel with the new topic |
+
+
+* * *
+
+<a name="CabalDetails+event_channel-focus"></a>
+
+### "channel-focus"
+Fires when the user has focused (i.e. switched to) a new channel
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| channel | <code>string</code> | Name of the focused channel |
+
+
+* * *
+
+<a name="CabalDetails+event_channel-join"></a>
+
+### "channel-join"
+Fires when a user has joined a channel
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| channel | <code>string</code> | Name of the joined channel |
+| key | <code>string</code> | Public key of the user joining the channel |
+| isLocal | <code>boolean</code> | True if it was the local user joining a new channel |
+
+
+* * *
+
+<a name="CabalDetails+event_channel-leave"></a>
+
+### "channel-leave"
+Fires when a user has leaveed a channel
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| channel | <code>string</code> | Name of the leaved channel |
+| key | <code>string</code> | Public key of the user leaving the channel |
+| isLocal | <code>boolean</code> | True if it was the local user leaving a new channel |
+
+
+* * *
+
+<a name="CabalDetails+event_cabal-focus"></a>
+
+### "cabal-focus"
+Fires when another cabal has been focused
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| key | <code>string</code> | Key of the focused cabal |
+
+
+* * *
+
+<a name="CabalDetails+event_started-peering"></a>
+
+### "started-peering"
+Fires when the local user has connected directly with another peer
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| key | <code>string</code> | Public key of the other peer |
+| name- | <code>string</code> | Name of the other peer |
+
+
+* * *
+
+<a name="CabalDetails+event_stopped-peering"></a>
+
+### "stopped-peering"
+Fires when the local user has disconnected with another peer
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| key | <code>string</code> | Public key of the other peer |
+| name- | <code>string</code> | Name of the other peer |
+
+
+* * *
+
+<a name="CabalDetails+event_update"></a>
+
+### "update"
+Fires when any kind of change has happened to the cabal.
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
 
 * * *
 
