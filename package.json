@@ -16,7 +16,7 @@
   },
   "keywords": [],
   "dependencies": {
-    "cabal-core": "^9.0.3",
+    "cabal-core": "^10.0.0",
     "collect-stream": "^1.2.1",
     "dat-dns": "^4.0.1",
     "debug": "^4.1.1",
