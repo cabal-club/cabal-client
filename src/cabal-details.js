@@ -1,7 +1,6 @@
 const EventEmitter = require('events')
 const debug = require("debug")("cabal-client")
 const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
-const { nextTick } = process
 
 /**
  * @typedef user
