@@ -1,6 +1,7 @@
 const EventEmitter = require('events')
 const debug = require("debug")("cabal-client")
 const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
+const { nextTick } = process
 
 /**
  * @typedef user
@@ -32,18 +33,34 @@ class CabalDetails extends EventEmitter {
    * @fires CabalDetails#cabal-focus
    * @fires CabalDetails#started-peering
    * @fires CabalDetails#stopped-peering
-   * @param {*} cabal 
+   * @param {object} { cabal , commands, aliases }
    * @param {function} done the function to be called after the cabal is initialized
    */
-  constructor(cabal, done) {
+  constructor({ cabal, client, commands, aliases }, done) {
     super()
     this._cabal = cabal
+    this.client = client
+    this._commands = commands || {}
+    this._aliases = aliases || {}
+    this._res = {
+      info: (msg) => {
+        this._emitUpdate("info", msg)
+      },
+      error: (err) => {
+        this._emitUpdate("error", err)
+      },
+      end: () => {
+        // does nothing right now but may emit an event to indicate the command
+        // has finished in the future
+      }
+    }
     this.key = cabal.key
     
     this.channels = {
       '!status': new VirtualChannelDetails("!status"),
     }
     this.chname = "!status"
+    this.channel = this.chname // alias for commands. keep chname for backwards compat
     
     this.name = ''
     this.topic = ''
@@ -76,6 +93,39 @@ class CabalDetails extends EventEmitter {
     })
   }
 
+  /**
+   * Interpret a line of input from the user.
+   * This may involve running a command or publishing a message to the current
+   * channel.
+   * @param {string} [line] input from the user
+   * @param {function} [cb] callback called when the input is processed
+   */
+  processLine(line, cb) {
+    var m = /^\/(\w+)(?:\s+(.*))?/.exec(line.trimRight())
+    if (m && this._commands[m[1]] && typeof this._commands[m[1]].call === 'function') {
+      this._commands[m[1]].call(this, this._res, m[2])
+    } else if (m && this._aliases[m[1]]) {
+      var key = this._aliases[m[1]]
+      if (this._commands[key]) {
+        this._commands[key].call(this, this._res, m[2])
+      } else {
+        this._res.info(`command for alias ${m[1]} => ${key} not found`)
+        cb()
+      }
+    } else if (m) {
+      this._res.info(`${m[1]} is not a command. type /help for commands`)
+    } else if (this.chname !== '!status' && /\S/.test(line)) {
+      // disallow typing to !status
+      this.publishMessage({
+        type: 'chat/text',
+        content: {
+          channel: this.chname,
+          text: line.trimRight()
+        }
+      }, {}, cb)
+    }
+  }
+
    // publish message up to consumer
    /* `message` is of type
    { 
@@ -89,6 +139,7 @@ class CabalDetails extends EventEmitter {
        } 
    }
    */
+
   /**
    * Publish a message up to consumer. See 
    * [`cabal-core`](https://github.com/cabal-club/cabal-core/) 
@@ -123,9 +174,12 @@ class CabalDetails extends EventEmitter {
    * @param {function} [cb] will be called after the nick is published
    */
   publishNick(nick, cb) {
-    this._cabal.publishNick(nick, cb)
-    this.user.name = nick
-    this._emitUpdate("publish-nick", { name: nick })
+    this._cabal.publishNick(nick, (err) => {
+      if (err) return cb(err)
+      this.user.name = nick
+      this._emitUpdate("publish-nick", { name: nick })
+      cb()
+    })
   }
 
   /**
@@ -168,6 +222,7 @@ class CabalDetails extends EventEmitter {
       currentChannel.unfocus()
     }
     this.chname = channel
+    this.channel = this.chname
     currentChannel = this.channels[channel]
     currentChannel.focus()
     this._emitUpdate("channel-focus", { channel })

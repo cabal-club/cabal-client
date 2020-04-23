@@ -8,6 +8,7 @@ const level = require('level')
 const path = require('path')
 const mkdirp = require('mkdirp')
 const os = require('os')
+const defaultCommands = require('./commands')
 
 class Client {
   /**
@@ -41,6 +42,13 @@ class Client {
     this.currentCabal = null
     this.config = opts.config
     this.maxFeeds = opts.maxFeeds || 1000
+    this.aliases = opts.aliases || {}
+    this.commands = Object.assign({}, defaultCommands, opts.commands)
+    Object.keys(this.commands).forEach(key => {
+      ;(this.commands[key].alias || []).forEach(alias => {
+        this.aliases[alias] = key
+      })
+    })
 
     let cabalDnsOpts = {
       hashRegex: /^[0-9a-f]{64}?$/i,
@@ -92,7 +100,6 @@ class Client {
     return path.join(os.homedir(), '.cabal', `v${Client.getDatabaseVersion()}`)
   }
 
-
   /**
    * Resolve the DNS shortname `name`. If `name` is already a cabal key,  it will 
    * be returned and the DNS lookup is aborted.
@@ -112,9 +119,9 @@ class Client {
    * Create a new cabal.
    * @returns {Promise} a promise that resolves into a `CabalDetails` instance.
    */
-  createCabal () {
+  createCabal (cb) {
     const key = Client.generateKey()
-    return this.addCabal(key)
+    return this.addCabal(key, cb)
   }
 
 
@@ -159,7 +166,12 @@ class Client {
           if (!this.currentCabal) {
             this.currentCabal = cabal
           }
-          const details = new CabalDetails(cabal, cb)
+          const details = new CabalDetails({
+            cabal,
+            client: this,
+            commands: this.commands,
+            aliases: this.aliases,
+          }, cb)
           this.cabals.set(cabal, details)
           cabal.swarm()
           resolve(details)
@@ -226,6 +238,50 @@ class Client {
    */
   getCurrentCabal () {
     return this.cabalToDetails(this.currentCabal)
+  }
+
+  /**
+   * Add a command to the set of supported commands.
+   * @param {string} [name] the long-form command name
+   * @param {object} [cmd] the command object
+   * @param {function} [cmd.help] function returning help text
+   * @param {array} [cmd.alias] array of string aliases
+   * @param {function} [cmd.call] implementation of the command receiving (cabal, res, arg) arguments
+   */
+  addCommand(name, cmd) {
+    this.commands[name] = cmd
+    ;(cmd.alias || []).forEach(alias => {
+      this.aliases[alias] = name
+    })
+  }
+
+  /**
+   * Remove a command.
+   * @param {string} [name] the command name
+   */
+  removeCommand(name) {
+    var cmd = this.commands[name]
+    ;(cmd.alias || []).forEach(alias => {
+      delete this.aliases[alias]
+    })
+    delete this.commands[name]
+  }
+
+  /**
+   * Get an object mapping command names to command objects.
+   */
+  getCommands () {
+    return this.commands
+  }
+
+  /**
+   * Add an alias `shortCmd` for `longCmd`
+   * @param {string} [longCmd] command to be aliased
+   * @param {string} [shortCmd] alias
+   */
+  addAlias(longCmd, shortCmd) {
+    this.aliases[shortCmd] = longCmd
+    this.commands[longCmd].alias.push(shortCmd)
   }
 
   /**
