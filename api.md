@@ -22,6 +22,10 @@
         * [.getDetails()](#Client+getDetails) ⇒ [<code>CabalDetails</code>](#CabalDetails)
         * [.getCabalKeys()](#Client+getCabalKeys) ⇒ <code>Array.&lt;string&gt;</code>
         * [.getCurrentCabal()](#Client+getCurrentCabal) ⇒ [<code>CabalDetails</code>](#CabalDetails)
+        * [.addCommand([name], [cmd])](#Client+addCommand)
+        * [.removeCommand([name])](#Client+removeCommand)
+        * [.getCommands()](#Client+getCommands)
+        * [.addAlias([longCmd], [shortCmd])](#Client+addAlias)
         * [.cabalToDetails([cabal])](#Client+cabalToDetails) ⇒ [<code>CabalDetails</code>](#CabalDetails)
         * [.addStatusMessage(message, channel, [cabal])](#Client+addStatusMessage)
         * [.clearStatusMessages(channel, [cabal])](#Client+clearStatusMessages)
@@ -150,6 +154,55 @@ Returns a list of cabal keys, one for each open cabal.
 
 ### client.getCurrentCabal() ⇒ [<code>CabalDetails</code>](#CabalDetails)
 Get the current cabal.
+
+
+* * *
+
+<a name="Client+addCommand"></a>
+
+### client.addCommand([name], [cmd])
+Add a command to the set of supported commands.
+
+**Params**
+
+- *name* <code>string</code> - the long-form command name
+- *cmd* <code>object</code> - the command object
+    - *help* <code>function</code> - function returning help text
+    - *alias* <code>array</code> - array of string aliases
+    - *call* <code>function</code> - implementation of the command receiving (cabal, res, arg) arguments
+
+
+* * *
+
+<a name="Client+removeCommand"></a>
+
+### client.removeCommand([name])
+Remove a command.
+
+**Params**
+
+- *name* <code>string</code> - the command name
+
+
+* * *
+
+<a name="Client+getCommands"></a>
+
+### client.getCommands()
+Get an object mapping command names to command objects.
+
+
+* * *
+
+<a name="Client+addAlias"></a>
+
+### client.addAlias([longCmd], [shortCmd])
+Add an alias `shortCmd` for `longCmd`
+
+**Params**
+
+- *longCmd* <code>string</code> - command to be aliased
+- *shortCmd* <code>string</code> - alias
 
 
 * * *
@@ -418,7 +471,8 @@ Returns a string path of where all of the cabals are stored on the hard drive.
 **Emits**: [<code>update</code>](#CabalDetails+event_update), [<code>init</code>](#CabalDetails+event_init), [<code>user-updated</code>](#CabalDetails+event_user-updated), [<code>new-channel</code>](#CabalDetails+event_new-channel), [<code>new-message</code>](#CabalDetails+event_new-message), [<code>publish-message</code>](#CabalDetails+event_publish-message), [<code>publish-nick</code>](#CabalDetails+event_publish-nick), [<code>status-message</code>](#CabalDetails+event_status-message), [<code>topic</code>](#CabalDetails+event_topic), [<code>channel-focus</code>](#CabalDetails+event_channel-focus), [<code>channel-join</code>](#CabalDetails+event_channel-join), [<code>channel-leave</code>](#CabalDetails+event_channel-leave), [<code>cabal-focus</code>](#CabalDetails+event_cabal-focus), [<code>started-peering</code>](#CabalDetails+event_started-peering), [<code>stopped-peering</code>](#CabalDetails+event_stopped-peering)  
 
 * [CabalDetails](#CabalDetails)
-    * [new CabalDetails(cabal, done)](#new_CabalDetails_new)
+    * [new CabalDetails({, done)](#new_CabalDetails_new)
+    * [.processLine([line], [cb])](#CabalDetails+processLine)
     * [.publishMessage(msg, [opts], [cb])](#CabalDetails+publishMessage)
     * [.publishNick(nick, [cb])](#CabalDetails+publishNick)
     * [.publishChannelTopic([channel], topic, cb)](#CabalDetails+publishChannelTopic)
@@ -458,11 +512,26 @@ Returns a string path of where all of the cabals are stored on the hard drive.
 
 <a name="new_CabalDetails_new"></a>
 
-### new CabalDetails(cabal, done)
+### new CabalDetails({, done)
 **Params**
 
-- cabal <code>\*</code>
+- { <code>object</code> - cabal , commands, aliases }
 - done <code>function</code> - the function to be called after the cabal is initialized
+
+
+* * *
+
+<a name="CabalDetails+processLine"></a>
+
+### cabalDetails.processLine([line], [cb])
+Interpret a line of input from the user.
+This may involve running a command or publishing a message to the current
+channel.
+
+**Params**
+
+- *line* <code>string</code> - input from the user
+- *cb* <code>function</code> - callback called when the input is processed
 
 
 * * *
