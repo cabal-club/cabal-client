@@ -78,11 +78,16 @@ module.exports = {
       res.info(`there are currently ${channels.length} channels `)
       channels.map((c) => {
         var topic = cabal.getTopic(c)
-        if (topic.length > 0 && topic.length > 20) topic = topic.slice(0, 40) + '..'
+        var shortTopic = topic.length > 20 ? topic.slice(0, 40) + '..' : topic || ''
         var count = cabal.getChannelMembers(c).length
         var userPart = count ? `: ${count} ${count === 1 ? 'person' : 'people'}` : ''
-        var topicPart = topic.length > 0 ? ` ${chalk.cyan(topic)}` : ''
-        res.info(`  ${joinedChannels.includes(c) ? '*' : ' '} ${c}${userPart}${topicPart}`)
+        res.info({
+          text: `  ${joinedChannels.includes(c) ? '*' : ' '} ${c}${userPart}${shortTopic}`,
+          channel: c,
+          userCount: count,
+          topic,
+          joined: joinedChannels.includes(c)
+        })
       })
       res.end()
     }
