@@ -89,7 +89,7 @@ module.exports = {
         if (topic.length > 0 && topic.length > 20) topic = topic.slice(0, 40) + '..'
         var count = cabal.getChannelMembers(c).length
         var userPart = count ? `: ${count} ${count === 1 ? 'person' : 'people'}` : ''
-        var topicPart = topic.length > 0 ? ` ${chalk.cyan(topic)}` : ''
+        var topicPart = topic.length > 0 ? topic : ''
         res.info(`  ${joinedChannels.includes(c) ? '*' : ' '} ${c}${userPart}${topicPart}`)
       })
       res.end()
