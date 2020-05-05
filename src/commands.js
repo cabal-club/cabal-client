@@ -40,6 +40,14 @@ module.exports = {
       })
     }
   },
+  ids: {
+    help: () => 'toggle showing ids at the end of nicks. useful for moderation',
+    call: (cabal, res, arg) => {
+        cabal.showIds = !cabal.showIds
+        res.info(`toggled identifiers ${cabal.showIds ? "on" : "off"}`)
+        res.end()
+    }
+  },
   emote: {
     help: () => 'write an old-school text emote',
     alias: [ 'me' ],
@@ -61,7 +69,7 @@ module.exports = {
     call: (cabal, res, arg) => {
       var users = cabal.getUsers()
       var userkeys = Object.keys(users).map((key) => users[key]).sort(cmpUser)
-      res.info('history of peers in cabal cabal')
+      res.info('history of peers in cabal')
       userkeys.map((u) => {
         var username = u.name || 'conspirator'
         var spaces = ' '.repeat(15)
@@ -151,6 +159,11 @@ module.exports = {
   whois: {
     help: () => 'display the public keys associated with the passed in nick',
     call: (cabal, res, arg) => {
+      if (!arg) {
+        res.info(`usage: /whois <nick>`)
+        res.end()
+        return
+      }
       const users = cabal.getUsers()
       const whoisKeys = Object.keys(users).filter((k) => users[k].name && users[k].name === arg)
       res.info(`${arg}'s public keys:`)

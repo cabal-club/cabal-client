@@ -60,6 +60,7 @@ class CabalDetails extends EventEmitter {
     }
     this.chname = "!status"
     this.channel = this.chname // alias for commands. keep chname for backwards compat
+    this.showIds = false
     
     this.name = ''
     this.topic = ''
@@ -683,3 +684,4 @@ cabal.users.getAll((err, users) => {
 function noop () {}
 
 module.exports = CabalDetails
+
