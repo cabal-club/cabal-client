@@ -45,6 +45,9 @@ class CabalDetails extends EventEmitter {
       info: (msg) => {
         this._emitUpdate("info", msg)
       },
+      data: ({ command, data, arg }) => {
+        this._emitUpdate("command", { command: command, data: data, arg: arg })
+      },
       error: (err) => {
         this._emitUpdate("error", err)
       },

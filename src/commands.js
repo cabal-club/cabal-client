@@ -7,11 +7,13 @@ module.exports = {
     call: (cabal, res, arg) => {
       if (arg === '') {
         res.info('Usage example: /add <cabalkey>')
+        res.data({ command: 'add', arg: arg })
         res.end()
       } else {
         cabal.client.addCabal(arg, (err) => {
-          if (err) res.error(err)
-          else res.end()
+          if (err) return res.error(err)
+          res.data({ command: 'add', arg: arg })
+          res.end()
         })
       }
     }
@@ -20,8 +22,9 @@ module.exports = {
     help: () => 'create a new cabal',
     call: (cabal, res, arg) => {
       cabal.client.createCabal((err) => {
-        if (err) res.error(err)
-        else res.end()
+        if (err) return res.error(err)
+        res.data({ command: 'help', arg: arg })
+        res.end()
       })
     }
   },
@@ -36,6 +39,7 @@ module.exports = {
       cabal.publishNick(arg, (err) => {
         if (err) return res.error(err)
         res.info("you're now known as " + arg)
+        res.data({ command: 'nick', arg: arg })
         res.end()
       })
     }
@@ -51,8 +55,9 @@ module.exports = {
           text: arg
         }
       }, {}, (err) => {
-        if (err) res.error(err)
-        else res.end()
+        if (err) return res.error(err)
+        res.data({ command: 'emote', arg: arg })
+        res.end()
       })
     }
   },
@@ -68,6 +73,12 @@ module.exports = {
         var paddedName = (username + spaces).slice(0, spaces.length)
         res.info(`  ${paddedName} ${u.key}`)
       })
+      res.data({
+        command: 'names',
+        arg: arg,
+        data: userkeys.map((u) => u.name || u.key)
+      })
+      res.end()
     }
   },
   channels: {
@@ -89,6 +100,14 @@ module.exports = {
           joined: joinedChannels.includes(c)
         })
       })
+      res.data({
+        command: 'channels',
+        arg: arg,
+        data: {
+          channels: channels,
+          joinedChannels: joinedChannels
+        }
+      })
       res.end()
     }
   },
@@ -99,6 +118,13 @@ module.exports = {
       if (arg === '') arg = 'default'
       cabal.joinChannel(arg)
       cabal.focusChannel(arg)
+      res.data({ 
+        command: 'join',
+        arg: arg,
+        data: {
+          channel: arg
+        }
+      })
       res.end()
     }
   },
@@ -108,7 +134,16 @@ module.exports = {
     call: (cabal, res, arg) => {
       if (arg === '!status') return
       /* TODO: update `cabal.channel` with next channel */
+      var details = this.cabalToDetails(cabal)
+      var currentChannel = details.getCurrentChannel()
       cabal.leaveChannel(arg)
+      res.data({ 
+        command: 'leave',
+        data: {
+          channel: arg || currentChannel
+        },
+        arg: arg
+      })
       res.end()
     }
   },
@@ -116,6 +151,7 @@ module.exports = {
     help: () => 'clear the current backscroll',
     call: (cabal, res, arg) => {
       cabal.client.clearStatusMessages()
+      res.data({ command: 'clear', arg: arg })
       res.end()
     }
   },
@@ -126,6 +162,7 @@ module.exports = {
       qr.toString(cabalKey, { type: 'terminal' }, (err, qrcode) => {
         if (err) return
         res.info(`QR code for ${cabalKey}\n\n${qrcode}`)
+        res.data({ command: 'qr', data: qrcode, arg: arg })
         res.end()
       })
     }
@@ -135,8 +172,9 @@ module.exports = {
     alias: [ 'motd' ],
     call: (cabal, res, arg) => {
       cabal.publishChannelTopic(cabal.channel, arg, (err) => {
-        if (err) res.error(err)
-        else res.end()
+        if (err) return res.error(err)
+        res.data({ command: 'topic', arg: arg })
+        res.end()
       })
     }
   },
@@ -144,7 +182,9 @@ module.exports = {
     help: () => 'display your local user key',
     alias: [ 'key' ],
     call: (cabal, res, arg) => {
-      res.info('Local user key: ' + cabal.getLocalUser().key)
+      const key = cabal.getLocalUser().key
+      res.info('Local user key: ' + key)
+      res.data({ command: 'whoami', data: key, arg: arg })
       res.end()
     }
   },
@@ -158,6 +198,7 @@ module.exports = {
       for (var key of whoisKeys) {
         res.info(`  ${key}`)
       }
+      res.data({ command: 'whois', data: whoisKeys, arg: arg })
       res.end()
     }
   }
