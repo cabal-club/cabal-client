@@ -157,7 +157,8 @@ class ChannelDetails extends ChannelDetailsBase {
     this.messages = cabal.messages
   }
 
-  getPage(opts) {
+  getPage(opts, bans=[]) {
+    // hack (2020-05-06): added a hack to remove contents of messages posted by hidden peers
     opts = opts || {}
     const OGopts = Object.assign({}, opts)
     return new Promise((resolve, reject) => {
@@ -169,6 +170,12 @@ class ChannelDetails extends ChannelDetailsBase {
         const reversed = []
         for (let i = msgs.length - 1; i >= 0; --i) {
           const msg = msgs[i]
+          if (bans.includes(msg.key)) {
+            if (msg.value && msg.value.content&& msg.value.content.text) {
+              msg.value.content.text = "this peer's content has been hidden"
+              msg.value.content.banned = 'true'
+            }
+          }
           reversed.push(msg)
           const msgTime = msg.value.timestamp
           const dayTimestamp = msgTime - (msgTime % (24*60*60*1000))

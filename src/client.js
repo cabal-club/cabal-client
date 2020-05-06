@@ -1,5 +1,6 @@
 const Cabal = require('cabal-core')
 const CabalDetails = require('./cabal-details')
+const collect = require('collect-stream')
 const crypto = require('hypercore-crypto')
 const DatDns = require('dat-dns')
 const ram = require('random-access-memory')
@@ -411,9 +412,20 @@ class Client {
     if (opts.newerThan) pageOpts.gt = parseInt(opts.newerThan) // if you fix the -1 hack above, make sure that backscroll in cabal-cli works
     if (opts.amount) pageOpts.limit = parseInt(opts.amount)
     if (!opts.channel) { opts.channel = details.getCurrentChannel() }
-    const prom = details.getChannel(opts.channel).getPage(pageOpts)
-    if (!cb) { return prom }
-    prom.then(cb)
+
+    return new Promise((resolve, reject) => {
+      // TODO: verify that a cabal-wide banned user is also banned in a specific channel. 
+      // once verified: replace use of "@" with opts.channel
+      collect(details.core.moderation.listBans('@'), function (err, bans) {
+        if (err) return reject(err)
+        let bannedKeys = bans.map((b) => b.id)
+        resolve(bannedKeys)
+      })
+    }).then((bans) => {
+      const prom = details.getChannel(opts.channel).getPage(pageOpts, bans)
+      if (!cb) { return prom }
+      prom.then(cb)
+    })
   }
 
   /**

@@ -176,49 +176,81 @@ module.exports = {
       res.end()
     }
   },
-  ban: {
-    help: () => 'ban a user from a channel or the whole cabal',
+  hide: {
+    help: () => 'hide a user from a channel or the whole cabal',
     call: (cabal, res, arg) => {
-      if (!arg) {
-        res.info('usage: /ban (CHANNEL|@) KEY {REASON...}')
+      var args = (arg || '').split(/\s+/)
+      if (args[0].length === 0) { 
+        res.info('usage: /hide (CHANNEL|@) KEY {REASON...}')
         return res.end()
       }
-      var args = arg.split(/\s+/)
-      cabal.core.ban(args[1], {
-        channel: args[0],
+      let key = null
+      let channel = "@"
+      // allow a simple form of /hide <key>. defaults to no reason & cabal-wide
+      if (args.length === 1) {
+        key = args[0]
+      } else {
+        channel = args[0]
+        key = args[1]
+      }
+      // allow user.pubkey notation
+      if (key && key.length !== 64 && key.indexOf(".") >= 0) {
+        key = getFullKey(cabal, key.split(".")[1])
+      }
+      cabal.core.ban(key, {
+        channel,
         reason: args.slice(2).join(' ')
       }, (err) => {
-        if (err) res.error(err)
-        else res.end()
+        if (err) { res.error(err) }
+        else {
+          res.info("the peer has been hidden")
+          res.end()
+        }
       })
     }
   },
-  unban: {
-    help: () => 'unban a user from a channel or the whole cabal',
+  unhide: {
+    help: () => 'unhide a user from a channel or the whole cabal',
     call: (cabal, res, arg) => {
-      if (!arg) {
-        res.info('usage: /unban (CHANNEL|@) KEY {REASON...}')
+      var args = (arg || '').split(/\s+/)
+      if (args[0].length === 0) { 
+        res.info('usage: /unhide (CHANNEL|@) KEY {REASON...}')
         return res.end()
       }
-      var args = arg.split(/\s+/)
-      cabal.core.unban(args[1], {
-        channel: args[0],
+      let key = null
+      let channel = "@"
+      // allow a simple form of /unhide <key>. defaults to no reason & cabal-wide
+      if (args.length === 1) {
+        key = args[0]
+      } else {
+        channel = args[0]
+        key = args[1]
+      }
+      // allow user.pubkey notation
+      if (key && key.length !== 64 && key.indexOf(".") >= 0) {
+        key = getFullKey(cabal, key.split(".")[1])
+      }
+      cabal.core.unban(key, {
+        channel,
         reason: args.slice(2).join(' ')
       }, (err) => {
-        if (err) res.error(err)
-        else res.end()
+        if (err) { res.error(err) }
+        else {
+          res.info(`${getPeerName(cabal, key)} has been unhidden`)
+          res.end()
+        }
       })
     }
   },
   baninfo: {
     help: () => 'show information about a ban from a KEY@SEQ (use /banlist to obtain)',
     call: (cabal, res, arg) => {
-      var args = arg.split(/\s+/)
-      if (args.length === 0) {
+      var args = (arg || '').split(/\s+/)
+      if (args[0].length === 0) { 
         res.info('usage: /baninfo KEY@SEQ')
         return res.end()
       }
-      cabal.core.banInfo(args[0], function (err, doc) {
+      cabal.core.moderation.banInfo(args[0], function (err, doc) {
         if (err) return res.error(err)
         res.info(Object.assign({}, doc, {
           text: JSON.stringify(doc, 2, null)
@@ -235,7 +267,7 @@ module.exports = {
       pump(cabal.core.moderation.listBans(channel), to.obj(write, end))
       function write (row, enc, next) {
         res.info(Object.assign({}, row, {
-          text: `banned ${row.type}: ${row.id}`
+          text: `banned ${row.type}: ${getPeerName(cabal, row.id)}`
         }))
         next()
       }
@@ -248,11 +280,11 @@ module.exports = {
   role: {
     help: () => 'direct access to get/set roles used by ban and moderation commands',
     call: (cabal, res, arg) => {
-      if (!arg) {
+      var args = (arg || '').split(/\s+/)
+      if (args[0].length === 0) { 
         res.info('usage: /role (get|set) (CHANNEL|@) KEY')
         return res.end()
       }
-      var args = arg.split(/\s+/)
       var channel = args[1]
       var key = args[2]
       if (args[0] === 'get') {
@@ -270,24 +302,36 @@ module.exports = {
     help: () => 'add, remove, or list moderators',
     call: (cabal, res, arg) => {
       function usage () {
-        res.info('usage: /mod (add|remove) (CHANNEL|@) KEY {REASON...}')
-        res.info('usage: /mod list (CHANNEL|@)')
+        res.info('usage: /mod (add|remove) KEY {REASON...}')
+        res.info('usage: /mod list')
         res.end()
       }
-      if (!arg) return usage()
-      var args = arg.split(/\s+/)
-      var channel = args[1] || '@'
-      var key = args[2]
-      var reason = args.slice(3).join(' ')
+      var args = (arg || '').split(/\s+/)
+      if (args[0].length === 0) {
+        return usage()
+      }
+      var channel = '@' // experiment with only setting moderators cabal-wide
+      var key = args[1]
+      // allow user.pubkey notation
+      if (key && key.length !== 64 && key.indexOf(".") >= 0) {
+        key = getFullKey(cabal, key.split(".")[1])
+      }
+      var reason = args.slice(2).join(' ')
       if (args[0] === 'add') {
         cabal.core.addMod(key, { channel, reason }, (err) => {
-          if (err) res.error(err)
-          else res.end()
+        if (err) { res.error(err) }
+        else {
+          res.info(`${getPeerName(cabal, key)} has been added as a moderator`)
+          res.end()
+        }
         })
       } else if (args[0] === 'remove') {
         cabal.core.removeMod(key, { channel, reason }, (err) => {
-          if (err) res.error(err)
-          else res.end()
+        if (err) { res.error(err) }
+        else {
+          res.info(`${getPeerName(cabal, key)} has been removed from being a moderator`)
+          res.end()
+        }
         })
       } else if (args[0] == 'list') {
         pump(cabal.core.moderation.listMods(channel), to.obj(write, end))
@@ -296,7 +340,7 @@ module.exports = {
       }
       function write (row, enc, next) {
         res.info(Object.assign({}, row, {
-          text: `${row.id} [${row.role}]`
+          text: `${getPeerName(cabal, row.id)} [${row.role}]`
         }))
         next()
       }
@@ -307,30 +351,36 @@ module.exports = {
     }
   },
   admin: {
-    help: () => 'add or remove an admin for a channel or cabal-wide',
+    help: () => 'add or remove an admin cabal-wide',
     call: (cabal, res, arg) => {
-      if (!arg) {
-        res.info('usage: /admin (add|remove) (CHANNEL|@) KEY {REASON...}')
-        res.info('usage: /admin list (CHANNEL|@)')
+      var args = (arg || '').split(/\s+/)
+      if (args[0].length === 0) {
+        res.info('usage: /admin (add|remove) KEY {REASON...}')
+        res.info('usage: /admin list')
         return res.end()
       }
-      if (!arg) {
-        res.info(usage)
-        return res.end()
+      var channel = '@' // experiment with only setting administrators cabal-wide
+      var key = args[1]
+      // allow user.pubkey notation
+      if (key && key.length !== 64 && key.indexOf(".") >= 0) {
+        key = getFullKey(cabal, key.split(".")[1])
       }
-      var args = arg.split(/\s+/)
-      var channel = args[1] || '@'
-      var key = args[2]
-      var reason = args.slice(3).join(' ')
+      var reason = args.slice(2).join(' ')
       if (args[0] === 'add') {
         cabal.core.addAdmin(key, { channel, reason }, (err) => {
-          if (err) res.error(err)
-          else res.end()
+        if (err) { res.error(err) }
+        else {
+          res.info(`${getPeerName(cabal, key)} has been added as an administrator`)
+          res.end()
+        }
         })
       } else if (args[0] === 'remove') {
         cabal.core.removeAdmin(key, { channel, reason }, (err) => {
-          if (err) res.error(err)
-          else res.end()
+        if (err) { res.error(err) }
+        else {
+          res.info(`${getPeerName(cabal, key)} has been removed from being an administrator`)
+          res.end()
+        }
         })
       } else if (args[0] == 'list') {
         pump(cabal.core.moderation.listAdmins(channel), to.obj(write, end))
@@ -339,7 +389,7 @@ module.exports = {
       }
       function write (row, enc, next) {
         res.info(Object.assign({}, row, {
-          text: `${row.id}`
+          text: `${getPeerName(cabal, row.id)}`
         }))
         next()
       }
@@ -349,6 +399,19 @@ module.exports = {
       }
     }
   },
+}
+
+function getFullKey (details, key) {
+  const keys = Object.keys(details.getUsers())
+  return keys.filter((k) => k.startsWith(key))[0]
+}
+
+function getPeerName (details, key) {
+  const users = details.getUsers()
+  if (key in users) {
+    return users[key].name || key
+  }
+  return key
 }
 
 function cmpUser (a, b) {
