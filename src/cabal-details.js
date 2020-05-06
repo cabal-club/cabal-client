@@ -38,6 +38,7 @@ class CabalDetails extends EventEmitter {
   constructor({ cabal, client, commands, aliases }, done) {
     super()
     this._cabal = cabal
+    this.core = cabal
     this.client = client
     this._commands = commands || {}
     this._aliases = aliases || {}

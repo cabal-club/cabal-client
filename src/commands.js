@@ -1,4 +1,6 @@
-var qr = require('qrcode')
+const qr = require('qrcode')
+const pump = require('pump')
+const to = require('to2')
 
 module.exports = {
   add: {
@@ -173,7 +175,180 @@ module.exports = {
       }
       res.end()
     }
-  }
+  },
+  ban: {
+    help: () => 'ban a user from a channel or the whole cabal',
+    call: (cabal, res, arg) => {
+      if (!arg) {
+        res.info('usage: /ban (CHANNEL|@) KEY {REASON...}')
+        return res.end()
+      }
+      var args = arg.split(/\s+/)
+      cabal.core.ban(args[1], {
+        channel: args[0],
+        reason: args.slice(2).join(' ')
+      }, (err) => {
+        if (err) res.error(err)
+        else res.end()
+      })
+    }
+  },
+  unban: {
+    help: () => 'unban a user from a channel or the whole cabal',
+    call: (cabal, res, arg) => {
+      if (!arg) {
+        res.info('usage: /unban (CHANNEL|@) KEY {REASON...}')
+        return res.end()
+      }
+      var args = arg.split(/\s+/)
+      cabal.core.unban(args[1], {
+        channel: args[0],
+        reason: args.slice(2).join(' ')
+      }, (err) => {
+        if (err) res.error(err)
+        else res.end()
+      })
+    }
+  },
+  baninfo: {
+    help: () => 'show information about a ban from a KEY@SEQ (use /banlist to obtain)',
+    call: (cabal, res, arg) => {
+      var args = arg.split(/\s+/)
+      if (args.length === 0) {
+        res.info('usage: /baninfo KEY@SEQ')
+        return res.end()
+      }
+      cabal.core.banInfo(args[0], function (err, doc) {
+        if (err) return res.error(err)
+        res.info(Object.assign({}, doc, {
+          text: JSON.stringify(doc, 2, null)
+        }))
+        res.end()
+      })
+    }
+  },
+  banlist: {
+    help: () => 'list banned users per-channel or cabal-wide',
+    call: (cabal, res, arg) => {
+      var args = (arg || '').split(/\s+/)
+      var channel = args[0] || '@'
+      pump(cabal.core.moderation.listBans(channel), to.obj(write, end))
+      function write (row, enc, next) {
+        res.info(Object.assign({}, row, {
+          text: `banned ${row.type}: ${row.id}`
+        }))
+        next()
+      }
+      function end (next) {
+        res.end()
+        next()
+      }
+    }
+  },
+  role: {
+    help: () => 'direct access to get/set roles used by ban and moderation commands',
+    call: (cabal, res, arg) => {
+      if (!arg) {
+        res.info('usage: /role (get|set) (CHANNEL|@) KEY')
+        return res.end()
+      }
+      var args = arg.split(/\s+/)
+      var channel = args[1]
+      var key = args[2]
+      if (args[0] === 'get') {
+        cabal.core.moderation.getRole({ channel, key }, (err, role) => {
+          if (err) return res.error(err)
+          res.info({ role, text: role })
+          res.end()
+        })
+      } else {
+        res.error('not implemented')
+      }
+    }
+  },
+  mod: {
+    help: () => 'add, remove, or list moderators',
+    call: (cabal, res, arg) => {
+      function usage () {
+        res.info('usage: /mod (add|remove) (CHANNEL|@) KEY {REASON...}')
+        res.info('usage: /mod list (CHANNEL|@)')
+        res.end()
+      }
+      if (!arg) return usage()
+      var args = arg.split(/\s+/)
+      var channel = args[1] || '@'
+      var key = args[2]
+      var reason = args.slice(3).join(' ')
+      if (args[0] === 'add') {
+        cabal.core.addMod(key, { channel, reason }, (err) => {
+          if (err) res.error(err)
+          else res.end()
+        })
+      } else if (args[0] === 'remove') {
+        cabal.core.removeMod(key, { channel, reason }, (err) => {
+          if (err) res.error(err)
+          else res.end()
+        })
+      } else if (args[0] == 'list') {
+        pump(cabal.core.moderation.listMods(channel), to.obj(write, end))
+      } else {
+        usage()
+      }
+      function write (row, enc, next) {
+        res.info(Object.assign({}, row, {
+          text: `${row.id} [${row.role}]`
+        }))
+        next()
+      }
+      function end (next) {
+        res.end()
+        next()
+      }
+    }
+  },
+  admin: {
+    help: () => 'add or remove an admin for a channel or cabal-wide',
+    call: (cabal, res, arg) => {
+      if (!arg) {
+        res.info('usage: /admin (add|remove) (CHANNEL|@) KEY {REASON...}')
+        res.info('usage: /admin list (CHANNEL|@)')
+        return res.end()
+      }
+      if (!arg) {
+        res.info(usage)
+        return res.end()
+      }
+      var args = arg.split(/\s+/)
+      var channel = args[1] || '@'
+      var key = args[2]
+      var reason = args.slice(3).join(' ')
+      if (args[0] === 'add') {
+        cabal.core.addAdmin(key, { channel, reason }, (err) => {
+          if (err) res.error(err)
+          else res.end()
+        })
+      } else if (args[0] === 'remove') {
+        cabal.core.removeAdmin(key, { channel, reason }, (err) => {
+          if (err) res.error(err)
+          else res.end()
+        })
+      } else if (args[0] == 'list') {
+        pump(cabal.core.moderation.listAdmins(channel), to.obj(write, end))
+      } else {
+        res.error(usage)
+      }
+      function write (row, enc, next) {
+        res.info(Object.assign({}, row, {
+          text: `${row.id}`
+        }))
+        next()
+      }
+      function end (next) {
+        res.end()
+        next()
+      }
+    }
+  },
 }
 
 function cmpUser (a, b) {
