@@ -92,7 +92,7 @@ module.exports = {
         var count = cabal.getChannelMembers(c).length
         var userPart = count ? `: ${count} ${count === 1 ? 'person' : 'people'}` : ''
         res.info({
-          text: `  ${joinedChannels.includes(c) ? '*' : ' '} ${c}${userPart}${shortTopic}`,
+          text: `  ${joinedChannels.includes(c) ? '*' : ' '} ${c}${userPart} ${shortTopic}`,
           channel: c,
           userCount: count,
           topic,
