@@ -1,6 +1,7 @@
 const EventEmitter = require('events')
 const debug = require("debug")("cabal-client")
 const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
+const User = require("./user")
 
 /**
  * @typedef user
@@ -8,6 +9,10 @@ const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
  * @property {boolean} online 
  * @property {string} name The user's username
  * @property {string} key The user's public key
+ * @property {Map<string,string>} roles The user's role, per-channel ("@" means
+ *                                      cabal-wide"). Possible values are
+ *                                      {"admin", "mod", "normal", "hidden",
+ *                                      "muted", "blocked"}.
  * 
  * @event CabalDetails#update
  * @type {CabalDetails}
@@ -67,7 +72,7 @@ class CabalDetails extends EventEmitter {
     this.topic = ''
     this.users = {} // public keys -> cabal-core use
     this.listeners = [] // keep track of listeners so we can remove them when we remove a cabal
-    this.user = { local: true, online: true, key: '', name: '' }
+    this.user = new User({ local: true, online: true, key: '', name: '' })
     this._initialize(done)
   }
 
@@ -531,7 +536,7 @@ class CabalDetails extends EventEmitter {
     this.listeners.forEach((obj) => { obj.source.removeListener(obj.event, obj.listener)})
   }
 
-  _initializeUser(done) {
+  _initializeLocalUser(done) {
     this.core.getLocalKey((err, lkey) => {
       if (err) return done(err)
       this.user.key = lkey
@@ -635,12 +640,12 @@ this.registerListener(cabal.channels.events, 'add', (channel) => {
 cabal.users.getAll((err, users) => {
   if (err) return
   this.users = users
-  this._initializeUser(done)
+  this._initializeLocalUser(done)
 
   this.registerListener(cabal.users.events, 'update', (key) => {
     cabal.users.get(key, (err, user) => {
       if (err) return
-      this.users[key] = Object.assign(this.users[key] || {}, user)
+      this.users[key] = new User(Object.assign(this.users[key] || {}, user)
       if (this.user && key === this.user.key) this.user = this.users[key]
       this._emitUpdate("user-updated", { key, user })
     })
@@ -662,10 +667,7 @@ cabal.users.getAll((err, users) => {
       }
     })
     if (!found) {
-      this.users[key] = {
-        key,
-        online: true
-      }
+      this.users[key] = new User({ key, online: true })
     }
     this._emitUpdate("started-peering", { key, name: this.users[key].name || key })
   })
