@@ -163,7 +163,7 @@ class CabalDetails extends EventEmitter {
       msg.content.channel = this.chname
     }
     if (!msg.type) msg.type = "chat/text"
-      this._cabal.publish(msg, opts, (err, m) => {
+      this.core.publish(msg, opts, (err, m) => {
           this._emitUpdate("publish-message", { message: msg })
           cb(err, m)
       })
@@ -175,7 +175,7 @@ class CabalDetails extends EventEmitter {
    * @param {function} [cb] will be called after the nick is published
    */
   publishNick(nick, cb) {
-    this._cabal.publishNick(nick, (err) => {
+    this.core.publishNick(nick, (err) => {
       if (err) return cb(err)
       this.user.name = nick
       this._emitUpdate("publish-nick", { name: nick })
@@ -190,7 +190,7 @@ class CabalDetails extends EventEmitter {
    * @param {function} cb will be called when publishing has finished.
    */
   publishChannelTopic(channel=this.chname, topic, cb) {
-    this._cabal.publishChannelTopic(channel, topic, cb)
+    this.core.publishChannelTopic(channel, topic, cb)
   }
 
   /**
@@ -310,7 +310,7 @@ class CabalDetails extends EventEmitter {
     var details = this.channels[channel]
     // we created a channel
     if (!details) {
-        details = new ChannelDetails(this._cabal, channel)
+        details = new ChannelDetails(this.core, channel)
         this.channels[channel] = details
     }
     // we weren't already in the channel, join
@@ -320,7 +320,7 @@ class CabalDetails extends EventEmitter {
         content: { channel }
       }
       // publish a join message to the cabal to signify our presence
-      this._cabal.publish(joinMsg)
+      this.core.publish(joinMsg)
     }
     // we probably always want to open a joined channel?
     this.focusChannel(channel)
@@ -344,7 +344,7 @@ class CabalDetails extends EventEmitter {
         type: "channel/leave",
         content: { channel }
       }
-      this._cabal.publish(leaveMsg)
+      this.core.publish(leaveMsg)
     }
     var indexOldChannel = joined.indexOf(channel)
     var newChannel
@@ -532,14 +532,14 @@ class CabalDetails extends EventEmitter {
   }
 
   _initializeUser(done) {
-    this._cabal.getLocalKey((err, lkey) => {
+    this.core.getLocalKey((err, lkey) => {
       if (err) return done(err)
       this.user.key = lkey
       this.user.local = true
       this.user.online = true
       this.users[lkey] = this.user
       // try to get more data for user
-      this._cabal.users.get(lkey, (err, user) => {
+      this.core.users.get(lkey, (err, user) => {
         if (err || !user) { 
             this._emitUpdate("init")
             done(null)
@@ -558,7 +558,7 @@ class CabalDetails extends EventEmitter {
   }
 
   _initialize(done) {
-    const cabal = this._cabal
+    const cabal = this.core
     // populate channels
     cabal.channels.get((err, channels) => {
       channels.forEach((channel) => {
@@ -605,7 +605,7 @@ cabal.getLocalKey((err, lkey) => {
 // notify when a user has joined a channel
 this.registerListener(cabal.memberships.events, 'add', (channel, user) => {
   if (!this.channels[channel]) { 
-    this.channels[channel] = new ChannelDetails(this._cabal, channel)
+    this.channels[channel] = new ChannelDetails(this.core, channel)
   }
   this.channels[channel].addMember(user)
   this._emitUpdate("channel-join", { channel, key: user, isLocal: user === this.user.key })
@@ -614,7 +614,7 @@ this.registerListener(cabal.memberships.events, 'add', (channel, user) => {
 // notify when a user has left a channel
 this.registerListener(cabal.memberships.events, 'remove', (channel, user) => {
   if (!this.channels[channel]) { 
-    this.channels[channel] = new ChannelDetails(this._cabal, channel)
+    this.channels[channel] = new ChannelDetails(this.core, channel)
   }
   this.channels[channel].removeMember(user)
   this._emitUpdate("channel-leave", { channel, key: user, isLocal: user === this.user.key })
@@ -648,7 +648,7 @@ cabal.users.getAll((err, users) => {
 
   this.registerListener(cabal.topics.events, 'update', (msg) => {
       var { channel, text } = msg.value.content
-      if (!this.channels[channel]) { this.channels[channel] = new ChannelDetails(this._cabal, channel) }
+      if (!this.channels[channel]) { this.channels[channel] = new ChannelDetails(this.core, channel) }
       this.channels[channel].topic = text || ''
       this._emitUpdate("topic", { channel, topic: text || ''})
   })
