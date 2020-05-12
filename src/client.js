@@ -53,8 +53,8 @@ class Client {
     let cabalDnsOpts = {
       hashRegex: /^[0-9a-f]{64}?$/i,
       recordName: 'cabal',
-      protocolRegex: /^cabal:\/\/([0-9a-f]{64}(\?((admin|mod)=[0-9a-f]{64})(&(admin|mod)=[0-9a-f]{64})*)?)/i,
-      txtRegex: /^"?cabalkey=([0-9a-f]{64}(\?((admin|mod)=[0-9a-f]{64})(&(admin|mod)=[0-9a-f]{64})*)?)"?$/i
+      protocolRegex: /^(cabal:\/\/[0-9A-Fa-f]{64}\b.*)/i,
+      txtRegex: /^"?cabalkey=(cabal:\/\/[0-9A-Fa-f]{64}\b.*)"?$/i
     }
     // also takes opts.persistentCache which has a read and write function
     //   read: async function ()   // aka cache lookup function
