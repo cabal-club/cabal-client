@@ -1,4 +1,4 @@
-export class User {
+class User {
   constructor (defaults) {
     this.local = defaults.local === undefined ? false : defaults.local
     this.online = defaults.online === undefined ? false : defaults.online
@@ -8,3 +8,4 @@ export class User {
   }
 }
 
+module.exports = User
