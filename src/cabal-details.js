@@ -532,8 +532,12 @@ class CabalDetails extends EventEmitter {
   /**
    * Destroy all of the listeners associated with this `details` instance
    */
-  _destroy () {
+  _destroy (cb) {
+    cb = cb || noop
     this.listeners.forEach((obj) => { obj.source.removeListener(obj.event, obj.listener)})
+    this.core.close(() => {
+      this.core.db.close(cb)
+    })
   }
 
   _initializeLocalUser(done) {

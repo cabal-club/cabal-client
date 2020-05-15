@@ -209,15 +209,16 @@ class Client {
    * Remove the cabal `key`. Destroys everything related to it 
    * (the data is however still persisted to disk, fret not!).
    * @param {string} key 
+   * @param {function} cb
    */
-  removeCabal (key) {
+  removeCabal (key, cb) {
     const cabal = this._coerceToCabal(key)
     if (!cabal) {
       return false
     }
 
     const details = this.cabalToDetails(cabal)
-    details._destroy()
+    details._destroy(cb)
 
     // burn everything we know about the cabal
     delete this._keyToCabal[key]
