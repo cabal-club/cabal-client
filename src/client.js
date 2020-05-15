@@ -129,10 +129,19 @@ class Client {
   /**
    * Add/load the cabal at `key`. 
    * @param {string} key 
+   * @param {object} opts
    * @param {function(string)} cb a function to be called when the cabal has been initialized.
    * @returns {Promise} a promise that resolves into a `CabalDetails` instance.
    */
-  addCabal (key, cb) {
+  addCabal (key, opts, cb) {
+    if (typeof key === 'object' && !opts) {
+      opts = key
+      key = undefined
+    }
+    if (typeof opts === 'function' && !cb) {
+      cb = opts
+      opts = {}
+    }
     if (!cb || typeof cb !== 'function') cb = function noop () {}
     let cabalPromise
     let dnsFailed = false
@@ -174,7 +183,7 @@ class Client {
             aliases: this.aliases,
           }, cb)
           this.cabals.set(cabal, details)
-          cabal.swarm()
+          if (!opts.noSwarm) cabal.swarm()
           resolve(details)
         })
       })
