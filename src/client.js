@@ -416,6 +416,58 @@ class Client {
     prom.then(cb)
   }
 
+    /**
+   * Searches for messages that include the search string according to `opts`.
+   * @param {string} [searchString] string to match messages against
+   * @param {Object} [opts] 
+   * @param {number} [opts.olderThan] timestamp in epoch time. we want to search through messages that are *older* than this ts
+   * @param {number} [opts.newerThan] timestamp in epoch time. we want to search through messages that are *newer* than this ts
+   * @param {number} [opts.amount] amount of messages to be search through
+   * @param {string} [opts.channel] channel to get messages from. defaults to currently focused channel
+   * @param {Cabal} [cabal=this.currentCabal]
+   */
+  searchMessages(searchString, opts, cabal = this.currentCabal) {
+    return new Promise((resolve, reject) =>
+      {
+        if(!searchString && searchString != "") {
+          reject('search string must be set')
+        }
+
+        let searchBuffer = Buffer.from(searchString)
+
+        let matches = []
+
+        this.getMessages(opts, null, cabal).then((messages) =>
+          {
+            messages.forEach(message => {
+              let messageContent = message.value.content
+              if(messageContent) {
+                let textBuffer = Buffer.from(messageContent.text)
+
+                let matchedIndexes = []
+
+                charIteration:
+                for(let charIndex = 0; charIndex <= textBuffer.length - searchBuffer.length; charIndex++) {
+                    if(textBuffer[charIndex] == searchBuffer[0]) {
+                      for (let searchIndex = 0; searchIndex < searchBuffer.length; searchIndex++) {
+                        if(!(textBuffer[charIndex + searchIndex] == searchBuffer[searchIndex])) 
+                          continue charIteration             
+                      }
+                      matchedIndexes.push(charIndex)
+                    }
+                  }
+                
+                  if(matchedIndexes.length > 0) {
+                    matches.push({message: message, matchedIndexes: matchedIndexes})
+                  }  
+              }
+            });
+            resolve(matches)
+          }
+        ) 
+      }
+    )}
+
   /**
    * Returns the number of unread messages for `channel`.
    * @param {string} channel    
