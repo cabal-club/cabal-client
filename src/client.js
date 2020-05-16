@@ -142,6 +142,7 @@ class Client {
       cb = opts
       opts = {}
     }
+    opts = opts || {}
     if (!cb || typeof cb !== 'function') cb = function noop () {}
     let cabalPromise
     let dnsFailed = false
@@ -181,10 +182,13 @@ class Client {
             client: this,
             commands: this.commands,
             aliases: this.aliases,
-          }, cb)
+          }, done)
           this.cabals.set(cabal, details)
           if (!opts.noSwarm) cabal.swarm()
-          resolve(details)
+          function done () {
+            cb()
+            resolve(details)
+          }
         })
       })
     })

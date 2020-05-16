@@ -2,6 +2,7 @@ const EventEmitter = require('events')
 const debug = require("debug")("cabal-client")
 const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
 const User = require("./user")
+const collect = require('collect-stream')
 
 /**
  * @typedef user
@@ -72,7 +73,7 @@ class CabalDetails extends EventEmitter {
     this.topic = ''
     this.users = {} // public keys -> cabal-core use
     this.listeners = [] // keep track of listeners so we can remove them when we remove a cabal
-    this.user = new User({ local: true, online: true, key: '', name: '' })
+    this.user = undefined
     this._initialize(done)
   }
 
@@ -295,7 +296,7 @@ class CabalDetails extends EventEmitter {
    * @returns {user} The local user for this cabal.
    */
   getLocalUser() {
-    return Object.assign({}, this.user)
+    return this.user
   }
 
   /**
@@ -543,6 +544,7 @@ class CabalDetails extends EventEmitter {
   _initializeLocalUser(done) {
     this.core.getLocalKey((err, lkey) => {
       if (err) return done(err)
+      this.user = new User()
       this.user.key = lkey
       this.user.local = true
       this.user.online = true
@@ -641,10 +643,32 @@ class CabalDetails extends EventEmitter {
       this._emitUpdate("new-channel", { channel })
     })
 
+    // Load moderation state
+    const loadModerationState = (cb) => {
+      cabal.channels.get((err, channels) => {
+        channels.push('@')  // artifically include the virtual cabal-wide channel, "@"
+        let pending = channels.length
+        channels.forEach((channel) => {
+          collect(cabal.moderation.listRoles(channel), (err, roles) => {
+            roles.forEach(info => {
+              this.users[info.id].roles[channel] = info.role
+            })
+            if (!--pending) cb()
+          })
+        })
+      })
+    }
+
     cabal.users.getAll((err, users) => {
       if (err) return
-      this.users = users
-      this._initializeLocalUser(done)
+
+      this.users = new Map()
+      Object.keys(users).forEach(key => {
+        this.users[key] = new User(users[key])
+      })
+      this._initializeLocalUser(() => {
+        loadModerationState(done)
+      })
 
       this.registerListener(cabal.users.events, 'update', (key) => {
         cabal.users.get(key, (err, user) => {
