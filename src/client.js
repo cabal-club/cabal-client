@@ -418,6 +418,7 @@ class Client {
 
     /**
    * Searches for messages that include the search string according to `opts`.
+   * Each returned match contains a message string and a matchedIndexes array containing the indexes at which the search string was found in the message
    * @param {string} [searchString] string to match messages against
    * @param {Object} [opts] 
    * @param {number} [opts.olderThan] timestamp in epoch time. we want to search through messages that are *older* than this ts
@@ -425,6 +426,7 @@ class Client {
    * @param {number} [opts.amount] amount of messages to be search through
    * @param {string} [opts.channel] channel to get messages from. defaults to currently focused channel
    * @param {Cabal} [cabal=this.currentCabal]
+   * @returns {Promise} a promise that resolves into a list of matches.
    */
   searchMessages (searchString, opts, cabal = this.currentCabal) {
     return new Promise((resolve, reject) => {
@@ -442,6 +444,7 @@ class Client {
           if (messageContent) {
             let textBuffer = Buffer.from(messageContent.text)
 
+            /* positions at which the string was found, can be used for highlighting for example */
             let matchedIndexes = []
 
             /* use a labeled for-loop to cleanly continue top-level iteration */
