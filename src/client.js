@@ -429,7 +429,7 @@ class Client {
   searchMessages(searchString, opts, cabal = this.currentCabal) {
     return new Promise((resolve, reject) =>
       {
-        if (!searchString && searchString !== "") {
+        if (!searchString || searchString === "") {
           return reject('search string must be set')
         }
 
