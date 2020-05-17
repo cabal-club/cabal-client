@@ -416,6 +416,59 @@ class Client {
     prom.then(cb)
   }
 
+    /**
+   * Searches for messages that include the search string according to `opts`.
+   * Each returned match contains a message string and a matchedIndexes array containing the indexes at which the search string was found in the message
+   * @param {string} [searchString] string to match messages against
+   * @param {Object} [opts] 
+   * @param {number} [opts.olderThan] timestamp in epoch time. we want to search through messages that are *older* than this ts
+   * @param {number} [opts.newerThan] timestamp in epoch time. we want to search through messages that are *newer* than this ts
+   * @param {number} [opts.amount] amount of messages to be search through
+   * @param {string} [opts.channel] channel to get messages from. defaults to currently focused channel
+   * @param {Cabal} [cabal=this.currentCabal]
+   * @returns {Promise} a promise that resolves into a list of matches.
+   */
+  searchMessages (searchString, opts, cabal = this.currentCabal) {
+    return new Promise((resolve, reject) => {
+      if (!searchString || searchString === '') {
+        return reject(new Error('search string must be set'))
+      }
+
+      const searchBuffer = Buffer.from(searchString)
+
+      const matches = []
+
+      this.getMessages(opts, null, cabal).then((messages) => {
+        messages.forEach(message => {
+          let messageContent = message.value.content
+          if (messageContent) {
+            let textBuffer = Buffer.from(messageContent.text)
+
+            /* positions at which the string was found, can be used for highlighting for example */
+            let matchedIndexes = []
+
+            /* use a labeled for-loop to cleanly continue top-level iteration */
+            charIteration:
+            for (let charIndex = 0; charIndex <= textBuffer.length - searchBuffer.length; charIndex++) {
+                if (textBuffer[charIndex] == searchBuffer[0]) {
+                  for (let searchIndex = 0; searchIndex < searchBuffer.length; searchIndex++) {         
+                    if (!(textBuffer[charIndex + searchIndex] == searchBuffer[searchIndex])) 
+                      continue charIteration
+                }
+                matchedIndexes.push(charIndex)
+              }
+            }
+
+            if (matchedIndexes.length > 0) {
+              matches.push({ message, matchedIndexes })
+            }
+          }
+        })
+        resolve(matches)
+      })
+    })
+  }
+
   /**
    * Returns the number of unread messages for `channel`.
    * @param {string} channel    
