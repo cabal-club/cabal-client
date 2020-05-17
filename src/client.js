@@ -429,13 +429,13 @@ class Client {
   searchMessages(searchString, opts, cabal = this.currentCabal) {
     return new Promise((resolve, reject) =>
       {
-        if(!searchString && searchString != "") {
-          reject('search string must be set')
+        if (!searchString && searchString !== "") {
+          return reject('search string must be set')
         }
 
-        let searchBuffer = Buffer.from(searchString)
+        const searchBuffer = Buffer.from(searchString)
 
-        let matches = []
+        const matches = []
 
         this.getMessages(opts, null, cabal).then((messages) =>
           {
@@ -446,7 +446,8 @@ class Client {
 
                 let matchedIndexes = []
 
-                charIteration:
+                 /* use a labeled for-loop to cleanly continue top-level iteration */
+                 charIteration:
                 for(let charIndex = 0; charIndex <= textBuffer.length - searchBuffer.length; charIndex++) {
                     if(textBuffer[charIndex] == searchBuffer[0]) {
                       for (let searchIndex = 0; searchIndex < searchBuffer.length; searchIndex++) {
@@ -458,7 +459,7 @@ class Client {
                   }
                 
                   if(matchedIndexes.length > 0) {
-                    matches.push({message: message, matchedIndexes: matchedIndexes})
+                    matches.push({ message, matchedIndexes })
                   }  
               }
             });
