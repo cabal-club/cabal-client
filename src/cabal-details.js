@@ -10,10 +10,9 @@ const collect = require('collect-stream')
  * @property {boolean} online 
  * @property {string} name The user's username
  * @property {string} key The user's public key
- * @property {Map<string,string>} roles The user's role, per-channel ("@" means
- *                                      cabal-wide"). Possible values are
- *                                      {"admin", "mod", "normal", "hidden",
- *                                      "muted", "blocked"}.
+ * @property {Map<string,string>} flags The user's array of flags per channel
+ *   ("@" means cabal-wide"). Possible flags include
+ *   {"admin", "mod", "normal", "hide", "mute", "block"}.
  * 
  * @event CabalDetails#update
  * @type {CabalDetails}
@@ -647,14 +646,16 @@ class CabalDetails extends EventEmitter {
     const loadModerationState = (cb) => {
       cabal.channels.get((err, channels) => {
         channels.push('@')  // artifically include the virtual cabal-wide channel, "@"
-        let pending = channels.length
-        channels.forEach((channel) => {
-          collect(cabal.moderation.listRoles(channel), (err, roles) => {
-            roles.forEach(info => {
-              this.users[info.id].roles[channel] = info.role
-            })
-            if (!--pending) cb()
+        cabal.moderation.list((err, list) => {
+          if (err) return cb(err)
+          list.forEach(info => {
+            var user = this.users[info.id]
+            if (user) {
+              if (!user.flags) user.flags = new Map
+              user.flags[info.channel] = info.flags
+            }
           })
+          cb()
         })
       })
     }

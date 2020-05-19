@@ -430,7 +430,7 @@ class Client {
     return new Promise((resolve, reject) => {
       // TODO: verify that a cabal-wide banned user is also banned in a specific channel. 
       // once verified: replace use of "@" with opts.channel
-      collect(details.core.moderation.listBans('@'), function (err, bans) {
+      collect(details.core.moderation.listBlocks('@'), function (err, bans) {
         if (err) return reject(err)
         let bannedKeys = bans.map((b) => b.id)
         resolve(bannedKeys)

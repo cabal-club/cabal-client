@@ -197,8 +197,10 @@ module.exports = {
       if (key && key.length !== 64 && key.indexOf(".") >= 0) {
         key = getFullKey(cabal, key.split(".")[1])
       }
-      cabal.core.ban(key, {
+      cabal.core.moderation.addFlags({
+        id: key,
         channel,
+        flags: ['hide'],
         reason: args.slice(2).join(' ')
       }, (err) => {
         if (err) { res.error(err) }
@@ -230,8 +232,10 @@ module.exports = {
       if (key && key.length !== 64 && key.indexOf(".") >= 0) {
         key = getFullKey(cabal, key.split(".")[1])
       }
-      cabal.core.unban(key, {
+      cabal.core.moderation.removeFlags({
+        id: key,
         channel,
+        flags: ['hide'],
         reason: args.slice(2).join(' ')
       }, (err) => {
         if (err) { res.error(err) }
@@ -242,15 +246,15 @@ module.exports = {
       })
     }
   },
-  baninfo: {
-    help: () => 'show information about a ban from a KEY@SEQ (use /banlist to obtain)',
+  read: {
+    help: () => 'show raw information about a message from a KEY@SEQ',
     call: (cabal, res, arg) => {
       var args = (arg || '').split(/\s+/)
       if (args[0].length === 0) { 
         res.info('usage: /baninfo KEY@SEQ')
         return res.end()
       }
-      cabal.core.moderation.banInfo(args[0], function (err, doc) {
+      cabal.core.getMessage(args[0], function (err, doc) {
         if (err) return res.error(err)
         res.info(Object.assign({}, doc, {
           text: JSON.stringify(doc, 2, null)
@@ -259,42 +263,30 @@ module.exports = {
       })
     }
   },
-  banlist: {
-    help: () => 'list banned users per-channel or cabal-wide',
+  blocklist: {
+    help: () => 'list names, channels, blocks, hides, mutes',
     call: (cabal, res, arg) => {
       var args = (arg || '').split(/\s+/)
       var channel = args[0] || '@'
-      pump(cabal.core.moderation.listBans(channel), to.obj(write, end))
+      pump(cabal.core.moderation.listBlocks(channel), to.obj(write, end))
       function write (row, enc, next) {
-        res.info(Object.assign({}, row, {
-          text: `banned ${row.type}: ${getPeerName(cabal, row.id)}`
-        }))
+        if (/^[0-9a-f]{64}@\d+$/.test(row.key)) {
+          cabal.core.getMessage(row.key, function (err, doc) {
+            if (err) return res.error(err)
+            res.info(Object.assign({}, row, {
+              text: `blocked ${row.type}: ${getPeerName(cabal, row.id)} ${doc.reason || ''}`
+            }))
+          })
+        } else {
+          res.info(Object.assign({}, row, {
+            text: `blocked ${row.type}: ${getPeerName(cabal, row.id)}`
+          }))
+        }
         next()
       }
       function end (next) {
         res.end()
         next()
-      }
-    }
-  },
-  role: {
-    help: () => 'direct access to get/set roles used by ban and moderation commands',
-    call: (cabal, res, arg) => {
-      var args = (arg || '').split(/\s+/)
-      if (args[0].length === 0) { 
-        res.info('usage: /role (get|set) (CHANNEL|@) KEY')
-        return res.end()
-      }
-      var channel = args[1]
-      var key = args[2]
-      if (args[0] === 'get') {
-        cabal.core.moderation.getRole({ channel, key }, (err, role) => {
-          if (err) return res.error(err)
-          res.info({ role, text: role })
-          res.end()
-        })
-      } else {
-        res.error('not implemented')
       }
     }
   },
@@ -318,33 +310,49 @@ module.exports = {
       }
       var reason = args.slice(2).join(' ')
       if (args[0] === 'add') {
-        cabal.core.addMod(key, { channel, reason }, (err) => {
-        if (err) { res.error(err) }
-        else {
-          res.info(`${getPeerName(cabal, key)} has been added as a moderator`)
-          res.end()
+        var opts = {
+          id: key,
+          channel,
+          flags: ['mod'],
+          reason
         }
+        cabal.core.moderation.addFlags(opts, (err) => {
+          if (err) { res.error(err) }
+          else {
+            res.info(`${getPeerName(cabal, key)} has been added as a moderator`)
+            res.end()
+          }
         })
       } else if (args[0] === 'remove') {
-        cabal.core.removeMod(key, { channel, reason }, (err) => {
-        if (err) { res.error(err) }
-        else {
-          res.info(`${getPeerName(cabal, key)} has been removed from being a moderator`)
-          res.end()
+        var opts = {
+          id: key,
+          channel,
+          flags: ['mod'],
+          reason
         }
+        cabal.core.moderation.removeFlags(opts, (err) => {
+          if (err) { res.error(err) }
+          else {
+            res.info(`${getPeerName(cabal, key)} has been removed from being a moderator`)
+            res.end()
+          }
         })
       } else if (args[0] == 'list') {
-        pump(cabal.core.moderation.listMods(channel), to.obj(write, end))
+        pump(cabal.core.moderation.listByFlag({
+          flag: 'mod',
+          channel
+        }), to.obj(write, end))
       } else {
         usage()
       }
       function write (row, enc, next) {
         res.info(Object.assign({}, row, {
-          text: `${getPeerName(cabal, row.id)} [${row.role}]`
+          text: `${getPeerName(cabal, row.id)}.${row.id}`
         }))
         next()
       }
       function end (next) {
+        res.info(`--- end of moderator list ---`)
         res.end()
         next()
       }
@@ -367,15 +375,27 @@ module.exports = {
       }
       var reason = args.slice(2).join(' ')
       if (args[0] === 'add') {
-        cabal.core.addAdmin(key, { channel, reason }, (err) => {
-        if (err) { res.error(err) }
-        else {
-          res.info(`${getPeerName(cabal, key)} has been added as an administrator`)
-          res.end()
+        var opts = {
+          id: key,
+          channel,
+          flags: ['admin'],
+          reason
         }
+        cabal.core.moderation.addFlags(opts, (err) => {
+          if (err) { res.error(err) }
+          else {
+            res.info(`${getPeerName(cabal, key)} has been added as an administrator`)
+            res.end()
+          }
         })
       } else if (args[0] === 'remove') {
-        cabal.core.removeAdmin(key, { channel, reason }, (err) => {
+        var opts = {
+          id: key,
+          channel,
+          flags: ['admin'],
+          reason
+        }
+        cabal.core.moderation.removeFlags(opts, (err) => {
         if (err) { res.error(err) }
         else {
           res.info(`${getPeerName(cabal, key)} has been removed from being an administrator`)
@@ -383,17 +403,21 @@ module.exports = {
         }
         })
       } else if (args[0] == 'list') {
-        pump(cabal.core.moderation.listAdmins(channel), to.obj(write, end))
+        pump(cabal.core.moderation.listByFlag({
+          flag: 'admin',
+          channel
+        }), to.obj(write, end))
       } else {
         res.error(usage)
       }
       function write (row, enc, next) {
         res.info(Object.assign({}, row, {
-          text: `${getPeerName(cabal, row.id)}`
+          text: `${getPeerName(cabal, row.id)}.${row.id} `
         }))
         next()
       }
       function end (next) {
+        res.info(`--- end of admin list ---`)
         res.end()
         next()
       }
