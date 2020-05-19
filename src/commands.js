@@ -106,20 +106,26 @@ module.exports = {
     help: () => 'join a new channel',
     alias: ['j'],
     call: (cabal, res, arg) => {
+      arg = (arg.trim() || '').replace(/^#/, '')
       if (arg === '') arg = 'default'
-      cabal.joinChannel(arg)
-      cabal.focusChannel(arg)
-      res.end()
+      cabal.joinChannel(arg, (err) => {
+        if (err) return res.error(err)
+        cabal.focusChannel(arg)
+        res.end()
+      })
     }
   },
   leave: {
     help: () => 'leave a channel',
-    alias: ['l'],
+    alias: ['l','part'],
     call: (cabal, res, arg) => {
+      arg = (arg || '').trim().replace(/^#/, '')
       if (arg === '!status') return
       /* TODO: update `cabal.channel` with next channel */
-      cabal.leaveChannel(arg)
-      res.end()
+      cabal.leaveChannel(arg, (err) => {
+        if (err) return res.error(err)
+        res.end()
+      })
     }
   },
   clear: {

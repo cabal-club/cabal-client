@@ -3,6 +3,7 @@ const debug = require("debug")("cabal-client")
 const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
 const User = require("./user")
 const collect = require('collect-stream')
+const { nextTick } = process
 
 /**
  * @typedef user
@@ -311,7 +312,11 @@ class CabalDetails extends EventEmitter {
    * and publishes a message announcing that you have joined the channel
    * @param {string} channel 
    */
-  joinChannel(channel) {
+  joinChannel(channel, cb) {
+    if (!cb) cb = noop
+    if (channel === '@' || /^!/.test(channel)) {
+      return nextTick(cb, new Error('cannot join invalid channel name'))
+    }
     var details = this.channels[channel]
     // we created a channel
     if (!details) {
@@ -325,10 +330,13 @@ class CabalDetails extends EventEmitter {
         content: { channel }
       }
       // publish a join message to the cabal to signify our presence
-      this.core.publish(joinMsg)
-    }
-    // we probably always want to open a joined channel?
-    this.focusChannel(channel)
+      this.core.publish(joinMsg, (err) => {
+        if (err) return cb(err)
+        // we probably always want to open a joined channel?
+        this.focusChannel(channel)
+        cb(null)
+      })
+    } else nextTick(cb, null)
   }
 
   /**
@@ -336,12 +344,22 @@ class CabalDetails extends EventEmitter {
    * that you have left the channel.
    * @param {string} channel 
    */
-  leaveChannel(channel) {
-    if (!channel) channel = this.chname
-    if (channel === "!status") return
+  leaveChannel(channel, cb) {
+    if (typeof channel === 'function') {
+      cb = channel
+      channel = this.chname
+    } else if (!channel) {
+      channel = this.chname
+    }
+    if (!cb) cb = noop
+    if (channel === "!status") {
+      return nextTick(cb, new Error('cannot leave the !status channel'))
+    }
     var joined = this.getJoinedChannels()
     var details = this.channels[channel]
-    if (!details) return
+    if (!details) {
+      return nextTick(cb, new Error('cannot leave a non-existent channel'))
+    }
     var left = details.leave()
     // we were in the channel, leave
     if (left) { 
@@ -349,17 +367,20 @@ class CabalDetails extends EventEmitter {
         type: "channel/leave",
         content: { channel }
       }
-      this.core.publish(leaveMsg)
+      this.core.publish(leaveMsg, (err) => {
+        if (err) return cb(err)
+        var indexOldChannel = joined.indexOf(channel)
+        var newChannel
+        // open up another channel if we left the one we were viewing
+        if (channel === this.chname) {
+          let newIndex = indexOldChannel + 1
+          if (indexOldChannel >= joined.length) newIndex = 0
+          newChannel = joined[newIndex] || "!status"
+        }
+        this.unfocusChannel(channel, newChannel)
+        cb(null)
+      })
     }
-    var indexOldChannel = joined.indexOf(channel)
-    var newChannel
-    // open up another channel if we left the one we were viewing
-    if (channel === this.chname) {
-      let newIndex = indexOldChannel + 1 
-      if (indexOldChannel >= joined.length) newIndex = 0
-      newChannel = joined[newIndex] || "!status"
-    }
-    this.unfocusChannel(channel, newChannel)
   }
 
   /**
