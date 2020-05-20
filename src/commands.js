@@ -1,6 +1,7 @@
 const qr = require('qrcode')
 const pump = require('pump')
 const to = require('to2')
+const strftime = require('strftime')
 
 module.exports = {
   add: {
@@ -59,6 +60,21 @@ module.exports = {
         content: {
           channel: cabal.channel,
           text: arg
+        }
+      }, {}, (err) => {
+        if (err) res.error(err)
+        else res.end()
+      })
+    }
+  },
+  say: {
+    help: () => 'write a message to the current channel',
+    call: (cabal, res, arg) => {
+      cabal.publishMessage({
+        type: 'chat/text',
+        content: {
+          channel: cabal.channel,
+          text: arg || ''
         }
       }, {}, (err) => {
         if (err) res.error(err)
@@ -182,76 +198,6 @@ module.exports = {
       res.end()
     }
   },
-  hide: {
-    help: () => 'hide a user from a channel or the whole cabal',
-    call: (cabal, res, arg) => {
-      var args = (arg || '').split(/\s+/)
-      if (args[0].length === 0) { 
-        res.info('usage: /hide (CHANNEL|@) KEY {REASON...}')
-        return res.end()
-      }
-      let key = null
-      let channel = "@"
-      // allow a simple form of /hide <key>. defaults to no reason & cabal-wide
-      if (args.length === 1) {
-        key = args[0]
-      } else {
-        channel = args[0]
-        key = args[1]
-      }
-      // allow user.pubkey notation
-      if (key && key.length !== 64 && key.indexOf(".") >= 0) {
-        key = getFullKey(cabal, key.split(".")[1])
-      }
-      cabal.core.moderation.addFlags({
-        id: key,
-        channel,
-        flags: ['hide'],
-        reason: args.slice(2).join(' ')
-      }, (err) => {
-        if (err) { res.error(err) }
-        else {
-          res.info("the peer has been hidden")
-          res.end()
-        }
-      })
-    }
-  },
-  unhide: {
-    help: () => 'unhide a user from a channel or the whole cabal',
-    call: (cabal, res, arg) => {
-      var args = (arg || '').split(/\s+/)
-      if (args[0].length === 0) { 
-        res.info('usage: /unhide (CHANNEL|@) KEY {REASON...}')
-        return res.end()
-      }
-      let key = null
-      let channel = "@"
-      // allow a simple form of /unhide <key>. defaults to no reason & cabal-wide
-      if (args.length === 1) {
-        key = args[0]
-      } else {
-        channel = args[0]
-        key = args[1]
-      }
-      // allow user.pubkey notation
-      if (key && key.length !== 64 && key.indexOf(".") >= 0) {
-        key = getFullKey(cabal, key.split(".")[1])
-      }
-      cabal.core.moderation.removeFlags({
-        id: key,
-        channel,
-        flags: ['hide'],
-        reason: args.slice(2).join(' ')
-      }, (err) => {
-        if (err) { res.error(err) }
-        else {
-          res.info(`${getPeerName(cabal, key)} has been unhidden`)
-          res.end()
-        }
-      })
-    }
-  },
   read: {
     help: () => 'show raw information about a message from a KEY@SEQ',
     call: (cabal, res, arg) => {
@@ -269,171 +215,187 @@ module.exports = {
       })
     }
   },
-  blocklist: {
-    help: () => 'list names, channels, blocks, hides, mutes',
+  hide: {
+    help: () => 'hide a user from a channel or the whole cabal',
     call: (cabal, res, arg) => {
-      var args = (arg || '').split(/\s+/)
-      var channel = args[0] || '@'
-      pump(cabal.core.moderation.listBlocks(channel), to.obj(write, end))
-      function write (row, enc, next) {
-        if (/^[0-9a-f]{64}@\d+$/.test(row.key)) {
-          cabal.core.getMessage(row.key, function (err, doc) {
-            if (err) return res.error(err)
-            res.info(Object.assign({}, row, {
-              text: `blocked ${row.type}: ${getPeerName(cabal, row.id)} ${doc.reason || ''}`
-            }))
-          })
-        } else {
-          res.info(Object.assign({}, row, {
-            text: `blocked ${row.type}: ${getPeerName(cabal, row.id)}`
-          }))
-        }
-        next()
-      }
-      function end (next) {
-        res.end()
-        next()
-      }
+      flagCmd('hide', cabal, res, arg)
+    }
+  },
+  unhide: {
+    help: () => 'unhide a user from a channel or the whole cabal',
+    call: (cabal, res, arg) => {
+      flagCmd('unhide', cabal, res, arg)
+    }
+  },
+  hides: {
+    help: () => 'list hides',
+    call: (cabal, res, arg) => {
+      listCmd('hide', cabal, res, arg)
+    }
+  },
+  block: {
+    help: () => 'block a user',
+    call: (cabal, res, arg) => {
+      flagCmd('block', cabal, res, arg)
+    }
+  },
+  unblock: {
+    help: () => 'unblock a user',
+    call: (cabal, res, arg) => {
+      flagCmd('unblock', cabal, res, arg)
+    },
+  },
+  blocks: {
+    help: () => 'list blocks',
+    call: (cabal, res, arg) => {
+      listCmd('block', cabal, res, arg)
     }
   },
   mod: {
-    help: () => 'add, remove, or list moderators',
+    help: () => 'add a user as a moderator',
     call: (cabal, res, arg) => {
-      function usage () {
-        res.info('usage: /mod (add|remove) KEY {REASON...}')
-        res.info('usage: /mod list')
-        res.end()
-      }
-      var args = (arg || '').split(/\s+/)
-      if (args[0].length === 0) {
-        return usage()
-      }
-      var channel = '@' // experiment with only setting moderators cabal-wide
-      var key = args[1]
-      // allow user.pubkey notation
-      if (key && key.length !== 64 && key.indexOf(".") >= 0) {
-        key = getFullKey(cabal, key.split(".")[1])
-      }
-      var reason = args.slice(2).join(' ')
-      if (args[0] === 'add') {
-        var opts = {
-          id: key,
-          channel,
-          flags: ['mod'],
-          reason
-        }
-        cabal.core.moderation.addFlags(opts, (err) => {
-          if (err) { res.error(err) }
-          else {
-            res.info(`${getPeerName(cabal, key)} has been added as a moderator`)
-            res.end()
-          }
-        })
-      } else if (args[0] === 'remove') {
-        var opts = {
-          id: key,
-          channel,
-          flags: ['mod'],
-          reason
-        }
-        cabal.core.moderation.removeFlags(opts, (err) => {
-          if (err) { res.error(err) }
-          else {
-            res.info(`${getPeerName(cabal, key)} has been removed from being a moderator`)
-            res.end()
-          }
-        })
-      } else if (args[0] == 'list') {
-        pump(cabal.core.moderation.listByFlag({
-          flag: 'mod',
-          channel
-        }), to.obj(write, end))
-      } else {
-        usage()
-      }
-      function write (row, enc, next) {
-        res.info(Object.assign({}, row, {
-          text: `${getPeerName(cabal, row.id)}.${row.id}`
-        }))
-        next()
-      }
-      function end (next) {
-        res.info(`--- end of moderator list ---`)
-        res.end()
-        next()
-      }
+      flagCmd('mod', cabal, res, arg)
+    }
+  },
+  unmod: {
+    help: () => 'remove a user as a moderator',
+    call: (cabal, res, arg) => {
+      flagCmd('unmod', cabal, res, arg)
+    },
+  },
+  mods: {
+    help: () => 'list mods',
+    call: (cabal, res, arg) => {
+      listCmd('mod', cabal, res, arg)
     }
   },
   admin: {
-    help: () => 'add or remove an admin cabal-wide',
+    help: () => 'add a user as an admin',
     call: (cabal, res, arg) => {
-      var args = (arg || '').split(/\s+/)
-      if (args[0].length === 0) {
-        res.info('usage: /admin (add|remove) KEY {REASON...}')
-        res.info('usage: /admin list')
-        return res.end()
-      }
-      var channel = '@' // experiment with only setting administrators cabal-wide
-      var key = args[1]
-      // allow user.pubkey notation
-      if (key && key.length !== 64 && key.indexOf(".") >= 0) {
-        key = getFullKey(cabal, key.split(".")[1])
-      }
-      var reason = args.slice(2).join(' ')
-      if (args[0] === 'add') {
-        var opts = {
-          id: key,
-          channel,
-          flags: ['admin'],
-          reason
-        }
-        cabal.core.moderation.addFlags(opts, (err) => {
-          if (err) { res.error(err) }
-          else {
-            res.info(`${getPeerName(cabal, key)} has been added as an administrator`)
-            res.end()
-          }
-        })
-      } else if (args[0] === 'remove') {
-        var opts = {
-          id: key,
-          channel,
-          flags: ['admin'],
-          reason
-        }
-        cabal.core.moderation.removeFlags(opts, (err) => {
-        if (err) { res.error(err) }
-        else {
-          res.info(`${getPeerName(cabal, key)} has been removed from being an administrator`)
-          res.end()
-        }
-        })
-      } else if (args[0] == 'list') {
-        pump(cabal.core.moderation.listByFlag({
-          flag: 'admin',
-          channel
-        }), to.obj(write, end))
-      } else {
-        res.error(usage)
-      }
-      function write (row, enc, next) {
-        res.info(Object.assign({}, row, {
-          text: `${getPeerName(cabal, row.id)}.${row.id} `
-        }))
-        next()
-      }
-      function end (next) {
-        res.info(`--- end of admin list ---`)
-        res.end()
-        next()
-      }
+      flagCmd('admin', cabal, res, arg)
     }
   },
+  unadmin: {
+    help: () => 'remove a user as an admin',
+    call: (cabal, res, arg) => {
+      flagCmd('unadmin', cabal, res, arg)
+    },
+  },
+  admins: {
+    help: () => 'list admins',
+    call: (cabal, res, arg) => {
+      listCmd('admin', cabal, res, arg)
+    }
+  },
+  actions: {
+    help: () => '',
+    call: (cabal, res, arg) => {
+      // todo
+      res.end()
+    },
+  },
+  roles: {
+    help: () => '',
+    call: (cabal, res, arg) => {
+      // todo
+      res.end()
+    },
+  },
+  inspect: {
+    help: () => '',
+    call: (cabal, res, arg) => {
+      // todo
+      res.end()
+    },
+  },
+  flag: {
+    help: () => 'update and read flags set for a given account',
+    call: (cabal, res, arg) => {
+      var args = arg ? arg.split(/\s+/) : []
+      if (args.length === 0) {
+        res.info(`usage: /flag (add|remove|set) NICK{.PUBKEY} [flags...]`)
+        res.info(`usage: /flag get NICK{.PUBKEY}`)
+        res.info(`usage: /flag list`)
+        return res.end()
+      }
+      var channel = '@'
+      var cmd = args[0]
+      if (/^(add|remove|set)$/.test(cmd)) {
+        var keys = parseNameToKeys(cabal, args[1])
+        var flags = args.slice(2)
+        if (keys.length > 1) {
+          res.info(`more than one key matches:`)
+          keys.forEach(key => {
+            res.info(`  /flag ${cmd} ${args[1]}.${key} ${flags}`)
+          })
+          return res.end()
+        }
+        var id = keys[0]
+        cabal.core.moderation[cmd+'Flags']({ id, channel, flags }, (err) => {
+          if (err) res.error(err)
+          else res.end()
+        })
+      } else if (args[0] === 'get') {
+        var keys = parseNameToKeys(cabal, args[1])
+        var flags = args.slice(2)
+        keys.forEach(id => {
+          cabal.core.moderation.getFlags({ id, channel }, (err, flags) => {
+            if (err) return res.error(err)
+            res.info({
+              text: `${id}: `
+                + flags.map(flag => /\s/.test(flag) ? JSON.stringify(flag) : flag)
+                  .sort().join(' '),
+              key: id,
+              flags
+            })
+            res.end()
+          })
+        })
+      } else if (args[0] === 'list') {
+        module.exports.flags.call(cabal, res, arg)
+      }
+    },
+  },
+  flags: {
+    help: () => 'list flags set for accounts',
+    call: (cabal, res, arg) => {
+      var args = arg ? arg.split(/\s+/) : []
+      cabal.core.moderation.list((err, list) => {
+        if (err) return res.error(err)
+        list.forEach(data => {
+          res.info({
+            text: JSON.stringify(data),
+            data
+          })
+        })
+        res.end()
+      })
+    },
+  }
 }
 
 function getFullKey (details, key) {
   const keys = Object.keys(details.getUsers())
   return keys.filter((k) => k.startsWith(key))[0]
+}
+
+function parseNameToKeys (details, name) {
+  if (!name) return null
+  if (/^[0-9a-f]{64}$/.test(name)) {
+    return [name]
+  }
+  if (name.length !== 64 && /\./.test(name)) {
+    return keys.filter((k) => k.startsWith(key))[0]
+    return getFullKey(details, name.split('.')[1])
+  }
+  const users = details.getUsers()
+  var keys = []
+  Object.keys(users).forEach(key => {
+    if (users[key].name === name) {
+      keys.push(key)
+    }
+  })
+  return keys
 }
 
 function getPeerName (details, key) {
@@ -451,4 +413,75 @@ function cmpUser (a, b) {
   if (b.name && !a.name) return 1
   if (a.name && b.name) return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1
   return a.key < b.key ? -1 : 1
+}
+
+function flagCmd (cmd, cabal, res, arg) {
+  var args = arg ? arg.split(/\s+/) : []
+  if (args.length === 0) { 
+    res.info(`usage: /${cmd} NICK{.PUBKEY} {REASON...}`)
+    return res.end()
+  }
+  let channel = "@"
+  var id = args[0]
+  var keys = parseNameToKeys(cabal, id)
+  if (keys.length === 0) {
+    res.info(`no matching user found for ${id}`)
+    return res.end()
+  }
+  if (keys.length > 1) {
+    res.info(`more than one key matches:`)
+    keys.forEach(key => {
+      res.info(`  /${cmd} ${id.split('.')[0]}.${key}`)
+    })
+    return res.end()
+  }
+  id = keys[0]
+  var fname = /^un/.test(cmd) ? 'removeFlags' : 'addFlags'
+  var flag = cmd.replace(/^un/,'')
+  cabal.core.moderation[fname]({
+    id,
+    channel,
+    flags: [flag],
+    reason: args.slice(1).join(' ')
+  }, (err) => {
+    if (err) { res.error(err) }
+    else {
+      res.info(`${/^un/.test(cmd) ? 'removed' : 'added'} flag ${flag} for ${id}`)
+      res.end()
+    }
+  })
+}
+
+function listCmd (cmd, cabal, res, arg) {
+  var args = arg ? arg.split(/\s+/) : []
+  var channel = '@'
+  pump(
+    cabal.core.moderation.listByFlag({ flag: cmd, channel }),
+    to.obj(write, end)
+  )
+  function write (row, enc, next) {
+    if (/^[0-9a-f]{64}@\d+$/.test(row.key)) {
+      cabal.core.getMessage(row.key, function (err, doc) {
+        if (err) return res.error(err)
+        res.info(Object.assign({}, row, {
+          text: `${cmd}: ${getPeerName(cabal, row.id)}: `
+            + (doc.timestamp ? strftime(' [%F %T] ', new Date(doc.timestamp)) : '')
+            + (doc.content && doc.content.reason || '')
+        }))
+      })
+    } else {
+      res.info(Object.assign({}, row, {
+        text: `${cmd}: ${getPeerName(cabal, row.id)}`
+      }))
+    }
+    next()
+  }
+  function end (next) {
+    res.end()
+    next()
+  }
+}
+
+function ucfirst (s) {
+  return s.replace(/^[a-z]/, function (c) { return c.toUpperCase() })
 }
