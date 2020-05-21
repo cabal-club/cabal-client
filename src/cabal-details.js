@@ -247,6 +247,7 @@ class CabalDetails extends EventEmitter {
    * @param {string} [channel=this.chname]
    */
   addStatusMessage(message, channel=this.chname) {
+    if (!this.channels[channel]) return
     this.channels[channel].addVirtualMessage(message)
     this._emitUpdate("status-message", { channel, message })
   }
@@ -686,10 +687,12 @@ class CabalDetails extends EventEmitter {
         loadModerationState(done)
       })
 
-      this.registerListener(cabal.moderation.events, 'update', (update) => {
-        console.log('update', update)
+      this.registerListener(cabal.moderation.events, 'update', (info) => {
         const user = this.users[info.id]
-        if (user) user.flags[update.group] = info.flags
+        if (user) {
+          user.flags[info.group] = info.flags
+          this._emitUpdate("user-updated", { key: info.id, user })
+        }
       })
 
       this.registerListener(cabal.users.events, 'update', (key) => {
