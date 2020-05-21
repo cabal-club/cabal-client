@@ -686,6 +686,12 @@ class CabalDetails extends EventEmitter {
         loadModerationState(done)
       })
 
+      this.registerListener(cabal.moderation.events, 'update', (update) => {
+        console.log('update', update)
+        const user = this.users[info.id]
+        if (user) user.flags[update.group] = info.flags
+      })
+
       this.registerListener(cabal.users.events, 'update', (key) => {
         cabal.users.get(key, (err, user) => {
           if (err) return
