@@ -665,19 +665,13 @@ class CabalDetails extends EventEmitter {
 
     // Load moderation state
     const loadModerationState = (cb) => {
-      cabal.channels.get((err, channels) => {
-        channels.push('@')  // artifically include the virtual cabal-wide channel, "@"
-        cabal.moderation.list((err, list) => {
-          if (err) return cb(err)
-          list.forEach(info => {
-            var user = this.users[info.id]
-            if (user) {
-              if (!user.flags) user.flags = new Map
-              user.flags[info.channel] = info.flags
-            }
-          })
-          cb()
+      cabal.moderation.list((err, list) => {
+        if (err) return cb(err)
+        list.forEach(info => {
+          const user = this.users[info.id]
+          if (user) user.flags[info.channel] = info.flags
         })
+        cb()
       })
     }
 
