@@ -111,8 +111,13 @@ class Client {
   resolveName (name, cb) {
     return this.cabalDns.resolveName(name).then((key) => {
       if (key === null) return null
-      if (!cb) return Client.scrubKey(key)
-      cb(Client.scrubKey(key))
+      key = Client.scrubKey(key)
+
+      // No DNS resolution happened; just use the original name.
+      if (name.indexOf(key) !== -1) key = name
+
+      if (!cb) return key
+      else cb(key)
     })
   }
 
