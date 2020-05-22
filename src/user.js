@@ -8,14 +8,22 @@ class User {
     this.flags = defaults.flags === undefined ? new Map() : defaults.flags
   }
 
+  isHidden (channel) {
+    const chan = this.flags.get(channel)
+    const all = this.flags.get('@')
+    return (chan && chan.includes('hide')) || (all && all.includes('hide'))
+  }
+
   isAdmin (channel) {
-    return (this.flags[channel] && this.flags[channel].includes('admin'))
-      || (this.flags['@'] && this.flags['@'].includes('admin'))
+    const chan = this.flags.get(channel)
+    const all = this.flags.get('@')
+    return (chan && chan.includes('admin')) || (all && all.includes('admin'))
   }
 
   isModerator (channel) {
-    return (this.flags[channel] && this.flags[channel].includes('mod'))
-      || (this.flags['@'] && this.flags['@'].includes('mod'))
+    const chan = this.flags.get(channel)
+    const all = this.flags.get('@')
+    return (chan && chan.includes('mod')) || (all && all.includes('mod'))
   }
 }
 

@@ -577,7 +577,7 @@ class CabalDetails extends EventEmitter {
             done(null)
             return
         }
-        this.user = user
+        this.user = new User(user)
         // restore `user.local` and `user.online` as they don't come from cabal-core
         this.user.key = lkey
         this.user.local = true
@@ -670,7 +670,7 @@ class CabalDetails extends EventEmitter {
         if (err) return cb(err)
         list.forEach(info => {
           const user = this.users[info.id]
-          if (user) user.flags[info.channel] = info.flags
+          if (user) user.flags.set(info.channel, info.flags)
         })
         cb()
       })
@@ -684,15 +684,22 @@ class CabalDetails extends EventEmitter {
         this.users[key] = new User(users[key])
       })
       this._initializeLocalUser(() => {
-        loadModerationState(done)
-      })
-
-      this.registerListener(cabal.moderation.events, 'update', (info) => {
-        const user = this.users[info.id]
-        if (user) {
-          user.flags[info.group] = info.flags
-          this._emitUpdate("user-updated", { key: info.id, user })
-        }
+        loadModerationState(() => {
+          this.registerListener(cabal.moderation.events, 'update', (info) => {
+            let user = this.users[info.id]
+            if (!user) {
+              const flags = new Map()
+              flags.set(info.group, info.flags)
+              user = new User({key:info.id, flags: flags})
+              this.users[info.id] = user
+            } else {
+              user.flags.set(info.group, info.flags)
+            }
+            this._emitUpdate("user-updated", { key: info.id, user })
+            this.addStatusMessage(user.name + ' now has flags', info.flags)
+          })
+          done()
+        })
       })
 
       this.registerListener(cabal.users.events, 'update', (key) => {
@@ -712,14 +719,9 @@ class CabalDetails extends EventEmitter {
       })
 
       this.registerListener(cabal, 'peer-added', (key) => {
-        var found = false
-        Object.keys(this.users).forEach((k) => {
-          if (k === key) {
-            this.users[k].online = true
-            found = true
-          }
-        })
-        if (!found) {
+        if (this.users[key]) {
+          this.users[key].online = true
+        } else {
           this.users[key] = new User({ key, online: true })
         }
         this._emitUpdate("started-peering", { key, name: this.users[key].name || key })
