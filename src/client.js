@@ -432,19 +432,9 @@ class Client {
     if (opts.amount) pageOpts.limit = parseInt(opts.amount)
     if (!opts.channel) { opts.channel = details.getCurrentChannel() }
 
-    return new Promise((resolve, reject) => {
-      // TODO: verify that a cabal-wide banned user is also banned in a specific channel. 
-      // once verified: replace use of "@" with opts.channel
-      collect(details.core.moderation.listBlocks('@'), function (err, bans) {
-        if (err) return reject(err)
-        let bannedKeys = bans.map((b) => b.id)
-        resolve(bannedKeys)
-      })
-    }).then((bans) => {
-      const prom = details.getChannel(opts.channel).getPage(pageOpts, bans)
-      if (!cb) { return prom }
-      prom.then(cb)
-    })
+    const prom = details.getChannel(opts.channel).getPage(pageOpts)
+    if (!cb) { return prom }
+    prom.then(cb)
   }
 
   /**
