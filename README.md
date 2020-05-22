@@ -14,6 +14,8 @@ Some of its features:
 * receiving unread notifications and mentions for channels
 * resolving of DNS shortnames (cabal.chat) to cabal keys
 
+For a couple of brief examples, see the [`examples/`](examples/) directory.
+
 ## Usage
 See [`cabal-cli`](https://github.com/cabal-club/cabal-cli/) for an example client implementation.
 
