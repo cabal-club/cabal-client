@@ -112,10 +112,6 @@ class Client {
     return this.cabalDns.resolveName(name).then((key) => {
       if (key === null) return null
       key = Client.scrubKey(key)
-
-      // No DNS resolution happened; just use the original name.
-      if (name.indexOf(key) !== -1) key = name
-
       if (!cb) return key
       else cb(key)
     })
@@ -162,7 +158,13 @@ class Client {
         const storage = temp ? ram : path.join(dbdir, resolvedKey)
         if (!temp) try { mkdirp.sync(path.join(dbdir, resolvedKey, 'views')) } catch (e) {}
         var db = temp ? memdb() : level(path.join(dbdir, resolvedKey, 'views'))
-        var cabal = Cabal(storage, resolvedKey, {db: db, maxFeeds: this.maxFeeds})
+
+        if (!key.startsWith('cabal://')) key = 'cabal://' + key
+        const uri = new URL(key)
+        const modKeys = uri.searchParams.getAll('mod')
+        const adminKeys = uri.searchParams.getAll('admin')
+
+        var cabal = Cabal(storage, resolvedKey, {modKeys, adminKeys, db: db, maxFeeds: this.maxFeeds})
         this._keyToCabal[resolvedKey] = cabal
         return cabal
       })
