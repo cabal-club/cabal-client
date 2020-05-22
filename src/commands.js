@@ -385,8 +385,7 @@ function parseNameToKeys (details, name) {
     return [name]
   }
   if (name.length !== 64 && /\./.test(name)) {
-    return keys.filter((k) => k.startsWith(key))[0]
-    return getFullKey(details, name.split('.')[1])
+    return [getFullKey(details, name.split('.')[1])]
   }
   const users = details.getUsers()
   var keys = []
