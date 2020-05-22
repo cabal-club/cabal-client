@@ -302,10 +302,40 @@ module.exports = {
     },
   },
   inspect: {
-    help: () => '',
+    help: () => 'view moderation actions published by a user',
     call: (cabal, res, arg) => {
-      // todo
-      res.end()
+      var args = arg ? arg.split(/\s+/) : []
+      if (args.length === 0) {
+        res.info(`usage: /inspect NICK{.PUBKEY}`)
+        return res.end()
+      }
+      var keys = parseNameToKeys(cabal, args[0])
+      listNextKey()
+      function listNextKey () {
+        if (keys.length === 0) return res.end()
+        var key = keys.shift()
+        res.info(`# moderation for ${getPeerName(cabal, key)}.${key.slice(0,8)}`)
+        pump(cabal.core.moderation.listModerationBy(key), to.obj(write, end))
+        function write (row, enc, next) {
+          var c = {
+            'flags/add': '+',
+            'flags/remove': '-',
+            'flags/set': '='
+          }[row.type] || '?'
+          var f = (row.content && row.content.flags || []).join(',')
+          var id = row.content && row.content.id || '???'
+          res.info(Object.assign({}, row, {
+            text: `${c}${f} ${getPeerName(cabal, id)}.${id.slice(0,8)} `
+              + (row.timestamp ? strftime('[%F %T] ', new Date(row.timestamp)) : '')
+              + (row.content && row.content.reason || '')
+          }))
+          next()
+        }
+        function end (next) {
+          listNextKey()
+          next()
+        }
+      }
     },
   },
   flag: {
