@@ -16,9 +16,9 @@
     * _instance_
         * [.resolveName(name, [cb])](#Client+resolveName)
         * [.createCabal()](#Client+createCabal) ⇒ <code>Promise</code>
-        * [.addCabal(key, cb)](#Client+addCabal) ⇒ <code>Promise</code>
+        * [.addCabal(key, opts, cb)](#Client+addCabal) ⇒ <code>Promise</code>
         * [.focusCabal(key)](#Client+focusCabal)
-        * [.removeCabal(key)](#Client+removeCabal)
+        * [.removeCabal(key, cb)](#Client+removeCabal)
         * [.getDetails()](#Client+getDetails) ⇒ [<code>CabalDetails</code>](#CabalDetails)
         * [.getCabalKeys()](#Client+getCabalKeys) ⇒ <code>Array.&lt;string&gt;</code>
         * [.getCurrentCabal()](#Client+getCurrentCabal) ⇒ [<code>CabalDetails</code>](#CabalDetails)
@@ -55,7 +55,8 @@
 <a name="new_Client_new"></a>
 
 ### new Client([opts])
-Create a client instance from which to manage multiple [`cabal-core`](https://github.com/cabal-club/cabal-core/) instances.
+Create a client instance from which to manage multiple 
+[`cabal-core`](https://github.com/cabal-club/cabal-core/) instances.
 
 **Params**
 
@@ -74,7 +75,9 @@ Create a client instance from which to manage multiple [`cabal-core`](https://g
 <a name="Client+resolveName"></a>
 
 ### client.resolveName(name, [cb])
-Resolve the DNS shortname `name`. If `name` is already a cabal key,  it will be returned and the DNS lookup is aborted.Returns the cabal key in `cb`. If `cb` is null a Promise is returned.
+Resolve the DNS shortname `name`. If `name` is already a cabal key,  it will 
+be returned and the DNS lookup is aborted.
+Returns the cabal key in `cb`. If `cb` is null a Promise is returned.
 
 **Params**
 
@@ -95,13 +98,14 @@ Create a new cabal.
 
 <a name="Client+addCabal"></a>
 
-### client.addCabal(key, cb) ⇒ <code>Promise</code>
+### client.addCabal(key, opts, cb) ⇒ <code>Promise</code>
 Add/load the cabal at `key`.
 
 **Returns**: <code>Promise</code> - a promise that resolves into a `CabalDetails` instance.  
 **Params**
 
 - key <code>string</code>
+- opts <code>object</code>
 - cb <code>function</code> - a function to be called when the cabal has been initialized.
 
 
@@ -121,12 +125,14 @@ Focus the cabal at `key`, used when you want to switch from one open cabal to an
 
 <a name="Client+removeCabal"></a>
 
-### client.removeCabal(key)
-Remove the cabal `key`. Destroys everything related to it (the data is however still persisted to disk, fret not!).
+### client.removeCabal(key, cb)
+Remove the cabal `key`. Destroys everything related to it 
+(the data is however still persisted to disk, fret not!).
 
 **Params**
 
 - key <code>string</code>
+- cb <code>function</code>
 
 
 * * *
@@ -219,7 +225,8 @@ Returns a `CabalDetails` instance for the passed in `cabal-core` instance.
 <a name="Client+addStatusMessage"></a>
 
 ### client.addStatusMessage(message, channel, [cabal])
-Add a status message, displayed client-side only, to the specified channel and cabal. If no cabal is specified, the currently focused cabal is used.
+Add a status message, displayed client-side only, to the specified channel and cabal. 
+If no cabal is specified, the currently focused cabal is used.
 
 **Params**
 
@@ -246,7 +253,8 @@ Clear status messages for the specified channel.
 <a name="Client+getUsers"></a>
 
 ### client.getUsers([cabal]) ⇒ <code>Array.&lt;Object&gt;</code>
-Returns a list of all the users for the specified cabal. If no cabal is specified, the currently focused cabal is used.
+Returns a list of all the users for the specified cabal. 
+If no cabal is specified, the currently focused cabal is used.
 
 **Returns**: <code>Array.&lt;Object&gt;</code> - the list of users  
 **Params**
@@ -259,7 +267,8 @@ Returns a list of all the users for the specified cabal. If no cabal is specifi
 <a name="Client+getJoinedChannels"></a>
 
 ### client.getJoinedChannels([cabal]) ⇒ <code>Array.&lt;Object&gt;</code>
-Returns a list of channels the user has joined for the specified cabal. If no cabal is specified, the currently focused cabal is used.
+Returns a list of channels the user has joined for the specified cabal. 
+If no cabal is specified, the currently focused cabal is used.
 
 **Returns**: <code>Array.&lt;Object&gt;</code> - the list of Channels  
 **Params**
@@ -272,7 +281,8 @@ Returns a list of channels the user has joined for the specified cabal. If no c
 <a name="Client+getChannels"></a>
 
 ### client.getChannels([cabal]) ⇒ <code>Array.&lt;Object&gt;</code>
-Returns a list of all channels for the specified cabal. If no cabal is specified, the currently focused cabal is used.
+Returns a list of all channels for the specified cabal. 
+If no cabal is specified, the currently focused cabal is used.
 
 **Returns**: <code>Array.&lt;Object&gt;</code> - the list of Channels  
 **Params**
@@ -329,7 +339,8 @@ Returns a list of messages according to `opts`. If `cb` is null, a Promise is re
 <a name="Client+searchMessages"></a>
 
 ### client.searchMessages([searchString], [opts], [cabal]) ⇒ <code>Promise</code>
-Searches for messages that include the search string according to `opts`.Each returned match contains a message string and a matchedIndexes array containing the indexes at which the search string was found in the message
+Searches for messages that include the search string according to `opts`.
+Each returned match contains a message string and a matchedIndexes array containing the indexes at which the search string was found in the message
 
 **Returns**: <code>Promise</code> - a promise that resolves into a list of matches.  
 **Params**
@@ -444,7 +455,8 @@ Get the current database version.
 <a name="Client.generateKey"></a>
 
 ### Client.generateKey() ⇒ <code>string</code>
-Returns a 64 character hex string i.e. a newly generated cabal key. Useful if you want to programmatically create a new cabal as part of a shell pipeline.
+Returns a 64 character hex string i.e. a newly generated cabal key. 
+Useful if you want to programmatically create a new cabal as part of a shell pipeline.
 
 
 * * *
@@ -461,7 +473,8 @@ Removes URI scheme and returns the cabal key as a 64 character hex string
 
 **Example**  
 ```js
-Client.scrubKey('cabal://12345678...')// => '12345678...'
+Client.scrubKey('cabal://12345678...')
+// => '12345678...'
 ```
 
 * * *
@@ -534,7 +547,9 @@ Returns a string path of where all of the cabals are stored on the hard drive.
 <a name="CabalDetails+processLine"></a>
 
 ### cabalDetails.processLine([line], [cb])
-Interpret a line of input from the user.This may involve running a command or publishing a message to the currentchannel.
+Interpret a line of input from the user.
+This may involve running a command or publishing a message to the current
+channel.
 
 **Params**
 
@@ -547,7 +562,9 @@ Interpret a line of input from the user.This may involve running a command or p
 <a name="CabalDetails+publishMessage"></a>
 
 ### cabalDetails.publishMessage(msg, [opts], [cb])
-Publish a message up to consumer. See [`cabal-core`](https://github.com/cabal-club/cabal-core/) for the full list of options.
+Publish a message up to consumer. See 
+[`cabal-core`](https://github.com/cabal-club/cabal-core/) 
+for the full list of options.
 
 **Params**
 
@@ -557,7 +574,13 @@ Publish a message up to consumer. See [`cabal-core`](https://github.com/cabal-c
 
 **Example**  
 ```js
-cabalDetails.publishMessage({  type: 'chat/text',  content: {    text: 'hello world',    channel: 'cabal-dev'  }})
+cabalDetails.publishMessage({
+  type: 'chat/text',
+  content: {
+    text: 'hello world',
+    channel: 'cabal-dev'
+  }
+})
 ```
 
 * * *
@@ -603,7 +626,8 @@ Publish a new channel topic to `channel`.
 <a name="CabalDetails+getChannelMembers"></a>
 
 ### cabalDetails.getChannelMembers([channel]) ⇒ <code>Array.&lt;object&gt;</code>
-Return the list of users that have joined `channel`. Note: this can be a subset of all of the users in a cabal.
+Return the list of users that have joined `channel`. 
+Note: this can be a subset of all of the users in a cabal.
 
 **Params**
 
@@ -649,7 +673,8 @@ Add a status message, visible locally only.
 <a name="CabalDetails+clearVirtualMessages"></a>
 
 ### cabalDetails.clearVirtualMessages([channel])
-Remove all of the virtual (i.e. status) messages associated with this channel. Virtual messages are local only.
+Remove all of the virtual (i.e. status) messages associated with this channel. 
+Virtual messages are local only.
 
 **Params**
 
@@ -675,14 +700,16 @@ Remove all of the virtual (i.e. status) messages associated with this channel. 
 <a name="CabalDetails+getLocalName"></a>
 
 ### cabalDetails.getLocalName() ⇒ <code>string</code>
-**Returns**: <code>string</code> - The local user's username (or their truncated public key, if theirusername is not set)  
+**Returns**: <code>string</code> - The local user's username (or their truncated public key, if their
+username is not set)  
 
 * * *
 
 <a name="CabalDetails+joinChannel"></a>
 
 ### cabalDetails.joinChannel(channel)
-Join a channel. This is distinct from focusing a channel, as this actually tracks changesand publishes a message announcing that you have joined the channel
+Join a channel. This is distinct from focusing a channel, as this actually tracks changes
+and publishes a message announcing that you have joined the channel
 
 **Params**
 
@@ -694,7 +721,8 @@ Join a channel. This is distinct from focusing a channel, as this actually track
 <a name="CabalDetails+leaveChannel"></a>
 
 ### cabalDetails.leaveChannel(channel)
-Leave a joined channel. This publishes a message announcing that you have left the channel.
+Leave a joined channel. This publishes a message announcing 
+that you have left the channel.
 
 **Params**
 
@@ -706,7 +734,8 @@ Leave a joined channel. This publishes a message announcing that you have left 
 <a name="CabalDetails+getUsers"></a>
 
 ### cabalDetails.getUsers() ⇒ <code>object</code>
-**Returns**: <code>object</code> - all of the users in this cabal. Each key is the public key of its corresponding user.  
+**Returns**: <code>object</code> - all of the users in this cabal. Each key is the public key of its 
+corresponding user.  
 
 * * *
 
@@ -730,6 +759,7 @@ Destroy all of the listeners associated with this `details` instance
 | online | <code>boolean</code> |  |
 | name | <code>string</code> | The user's username |
 | key | <code>string</code> | The user's public key |
+| flags | <code>Map.&lt;string, string&gt;</code> | The user's array of flags per channel   ("@" means cabal-wide"). Possible flags include   {"admin", "mod", "normal", "hide", "mute", "block"}. |
 
 
 * * *
