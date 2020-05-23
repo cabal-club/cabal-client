@@ -158,7 +158,6 @@ class ChannelDetails extends ChannelDetailsBase {
   }
 
   getPage(opts) {
-    // hack (2020-05-06): added a hack to remove contents of messages posted by hidden peers
     opts = opts || {}
     const OGopts = Object.assign({}, opts)
     return new Promise((resolve, reject) => {
