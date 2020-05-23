@@ -1,6 +1,9 @@
 const EventEmitter = require('events')
 const debug = require("debug")("cabal-client")
 const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
+const User = require("./user")
+const collect = require('collect-stream')
+const { nextTick } = process
 
 /**
  * @typedef user
@@ -8,6 +11,9 @@ const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
  * @property {boolean} online 
  * @property {string} name The user's username
  * @property {string} key The user's public key
+ * @property {Map<string,string>} flags The user's array of flags per channel
+ *   ("@" means cabal-wide"). Possible flags include
+ *   {"admin", "mod", "normal", "hide", "mute", "block"}.
  * 
  * @event CabalDetails#update
  * @type {CabalDetails}
@@ -38,6 +44,7 @@ class CabalDetails extends EventEmitter {
   constructor({ cabal, client, commands, aliases }, done) {
     super()
     this._cabal = cabal
+    this.core = cabal
     this.client = client
     this._commands = commands || {}
     this._aliases = aliases || {}
@@ -66,7 +73,7 @@ class CabalDetails extends EventEmitter {
     this.topic = ''
     this.users = {} // public keys -> cabal-core use
     this.listeners = [] // keep track of listeners so we can remove them when we remove a cabal
-    this.user = { local: true, online: true, key: '', name: '' }
+    this.user = undefined
     this._initialize(done)
   }
 
@@ -162,7 +169,7 @@ class CabalDetails extends EventEmitter {
       msg.content.channel = this.chname
     }
     if (!msg.type) msg.type = "chat/text"
-      this._cabal.publish(msg, opts, (err, m) => {
+      this.core.publish(msg, opts, (err, m) => {
           this._emitUpdate("publish-message", { message: msg })
           cb(err, m)
       })
@@ -174,7 +181,7 @@ class CabalDetails extends EventEmitter {
    * @param {function} [cb] will be called after the nick is published
    */
   publishNick(nick, cb) {
-    this._cabal.publishNick(nick, (err) => {
+    this.core.publishNick(nick, (err) => {
       if (err) return cb(err)
       this.user.name = nick
       this._emitUpdate("publish-nick", { name: nick })
@@ -189,7 +196,7 @@ class CabalDetails extends EventEmitter {
    * @param {function} cb will be called when publishing has finished.
    */
   publishChannelTopic(channel=this.chname, topic, cb) {
-    this._cabal.publishChannelTopic(channel, topic, cb)
+    this.core.publishChannelTopic(channel, topic, cb)
   }
 
   /**
@@ -240,6 +247,7 @@ class CabalDetails extends EventEmitter {
    * @param {string} [channel=this.chname]
    */
   addStatusMessage(message, channel=this.chname) {
+    if (!this.channels[channel]) return
     this.channels[channel].addVirtualMessage(message)
     this._emitUpdate("status-message", { channel, message })
   }
@@ -289,7 +297,7 @@ class CabalDetails extends EventEmitter {
    * @returns {user} The local user for this cabal.
    */
   getLocalUser() {
-    return Object.assign({}, this.user)
+    return this.user
   }
 
   /**
@@ -305,11 +313,15 @@ class CabalDetails extends EventEmitter {
    * and publishes a message announcing that you have joined the channel
    * @param {string} channel 
    */
-  joinChannel(channel) {
+  joinChannel(channel, cb) {
+    if (!cb) cb = noop
+    if (channel === '@' || /^!/.test(channel)) {
+      return nextTick(cb, new Error('cannot join invalid channel name'))
+    }
     var details = this.channels[channel]
     // we created a channel
     if (!details) {
-        details = new ChannelDetails(this._cabal, channel)
+        details = new ChannelDetails(this.core, channel)
         this.channels[channel] = details
     }
     // we weren't already in the channel, join
@@ -319,10 +331,13 @@ class CabalDetails extends EventEmitter {
         content: { channel }
       }
       // publish a join message to the cabal to signify our presence
-      this._cabal.publish(joinMsg)
-    }
-    // we probably always want to open a joined channel?
-    this.focusChannel(channel)
+      this.core.publish(joinMsg, (err) => {
+        if (err) return cb(err)
+        // we probably always want to open a joined channel?
+        this.focusChannel(channel)
+        cb(null)
+      })
+    } else nextTick(cb, null)
   }
 
   /**
@@ -330,12 +345,22 @@ class CabalDetails extends EventEmitter {
    * that you have left the channel.
    * @param {string} channel 
    */
-  leaveChannel(channel) {
-    if (!channel) channel = this.chname
-    if (channel === "!status") return
+  leaveChannel(channel, cb) {
+    if (typeof channel === 'function') {
+      cb = channel
+      channel = this.chname
+    } else if (!channel) {
+      channel = this.chname
+    }
+    if (!cb) cb = noop
+    if (channel === "!status") {
+      return nextTick(cb, new Error('cannot leave the !status channel'))
+    }
     var joined = this.getJoinedChannels()
     var details = this.channels[channel]
-    if (!details) return
+    if (!details) {
+      return nextTick(cb, new Error('cannot leave a non-existent channel'))
+    }
     var left = details.leave()
     // we were in the channel, leave
     if (left) { 
@@ -343,17 +368,20 @@ class CabalDetails extends EventEmitter {
         type: "channel/leave",
         content: { channel }
       }
-      this._cabal.publish(leaveMsg)
+      this.core.publish(leaveMsg, (err) => {
+        if (err) return cb(err)
+        var indexOldChannel = joined.indexOf(channel)
+        var newChannel
+        // open up another channel if we left the one we were viewing
+        if (channel === this.chname) {
+          let newIndex = indexOldChannel + 1
+          if (indexOldChannel >= joined.length) newIndex = 0
+          newChannel = joined[newIndex] || "!status"
+        }
+        this.unfocusChannel(channel, newChannel)
+        cb(null)
+      })
     }
-    var indexOldChannel = joined.indexOf(channel)
-    var newChannel
-    // open up another channel if we left the one we were viewing
-    if (channel === this.chname) {
-      let newIndex = indexOldChannel + 1 
-      if (indexOldChannel >= joined.length) newIndex = 0
-      newChannel = joined[newIndex] || "!status"
-    }
-    this.unfocusChannel(channel, newChannel)
   }
 
   /**
@@ -526,25 +554,30 @@ class CabalDetails extends EventEmitter {
   /**
    * Destroy all of the listeners associated with this `details` instance
    */
-  _destroy () {
+  _destroy (cb) {
+    cb = cb || noop
     this.listeners.forEach((obj) => { obj.source.removeListener(obj.event, obj.listener)})
+    this.core.close(() => {
+      this.core.db.close(cb)
+    })
   }
 
-  _initializeUser(done) {
-    this._cabal.getLocalKey((err, lkey) => {
+  _initializeLocalUser(done) {
+    this.core.getLocalKey((err, lkey) => {
       if (err) return done(err)
+      this.user = new User()
       this.user.key = lkey
       this.user.local = true
       this.user.online = true
       this.users[lkey] = this.user
       // try to get more data for user
-      this._cabal.users.get(lkey, (err, user) => {
+      this.core.users.get(lkey, (err, user) => {
         if (err || !user) { 
             this._emitUpdate("init")
             done(null)
             return
         }
-        this.user = user
+        this.user = new User(user)
         // restore `user.local` and `user.online` as they don't come from cabal-core
         this.user.key = lkey
         this.user.local = true
@@ -557,7 +590,7 @@ class CabalDetails extends EventEmitter {
   }
 
   _initialize(done) {
-    const cabal = this._cabal
+    const cabal = this.core
     // populate channels
     cabal.channels.get((err, channels) => {
       channels.forEach((channel) => {
@@ -566,108 +599,133 @@ class CabalDetails extends EventEmitter {
           this.channels[channel] = new ChannelDetails(cabal, channel)
         }
         // listen for updates that happen within the channel
-    cabal.messages.events.on(channel, this.messageListener.bind(this))
+        cabal.messages.events.on(channel, this.messageListener.bind(this))
 
-    // add all users joined to a channel
-    cabal.memberships.getUsers(channel, (err, users) => {
-      users.forEach((u) => this.channels[channel].addMember(u))
+        // add all users joined to a channel
+        cabal.memberships.getUsers(channel, (err, users) => {
+          users.forEach((u) => this.channels[channel].addMember(u))
+        })
+
+        // for each channel, get the topic
+        cabal.topics.get(channel, (err, topic) => {
+          this.channels[channel].topic = topic || ''
+        })
+      })
     })
 
-    // for each channel, get the topic
-    cabal.topics.get(channel, (err, topic) => {
-      this.channels[channel].topic = topic || ''
+    cabal.getLocalKey((err, lkey) => {
+      cabal.memberships.getMemberships(lkey, (err, channels) => {
+        if (channels.length === 0) {
+          // make `default` the first channel if no saved state exists
+          this.joinChannel('default')
+        }
+        for (let channel of channels) { 
+          // it's possible to be joined to a channel that `cabal.channels.get` doesn't return
+          // (it's an empty channel, with no messages)
+          let details = this.channels[channel]
+          if (!details) {
+            this.channels[channel] = new ChannelDetails(cabal, channel)
+            // listen for updates that happen within the channel
+            cabal.messages.events.on(channel, this.messageListener.bind(this))
+          }
+          this.channels[channel].joined = true
+        }
+      // this._emitUpdate() -- TODO: commented this generic event out, if things break then reinstate it. otherwise remove before merge
+      })
     })
-  })
-})
 
-cabal.getLocalKey((err, lkey) => {
-  cabal.memberships.getMemberships(lkey, (err, channels) => {
-    if (channels.length === 0) {
-      // make `default` the first channel if no saved state exists
-      this.joinChannel('default')
-    }
-    for (let channel of channels) { 
-      // it's possible to be joined to a channel that `cabal.channels.get` doesn't return
-      // (it's an empty channel, with no messages)
+    // notify when a user has joined a channel
+    this.registerListener(cabal.memberships.events, 'add', (channel, user) => {
+      if (!this.channels[channel]) { 
+        this.channels[channel] = new ChannelDetails(this.core, channel)
+      }
+      this.channels[channel].addMember(user)
+      this._emitUpdate("channel-join", { channel, key: user, isLocal: user === this.user.key })
+    })
+
+    // notify when a user has left a channel
+    this.registerListener(cabal.memberships.events, 'remove', (channel, user) => {
+      if (!this.channels[channel]) { 
+        this.channels[channel] = new ChannelDetails(this.core, channel)
+      }
+      this.channels[channel].removeMember(user)
+      this._emitUpdate("channel-leave", { channel, key: user, isLocal: user === this.user.key })
+    })
+
+    // register to be notified of new channels as they are created
+    this.registerListener(cabal.channels.events, 'add', (channel) => {
       let details = this.channels[channel]
       if (!details) {
         this.channels[channel] = new ChannelDetails(cabal, channel)
-        // listen for updates that happen within the channel
-        cabal.messages.events.on(channel, this.messageListener.bind(this))
       }
-      this.channels[channel].joined = true
+      // TODO: only do this for our joined channels, instead of all channels
+      // Calls fn with every new message that arrives in channel.
+      cabal.messages.events.on(channel, this.messageListener.bind(this))
+      this._emitUpdate("new-channel", { channel })
+    })
+
+    // Load moderation state
+    const loadModerationState = (cb) => {
+      cabal.moderation.list((err, list) => {
+        if (err) return cb(err)
+        list.forEach(info => {
+          const user = this.users[info.id]
+          if (user) user.flags.set(info.channel, info.flags)
+        })
+        cb()
+      })
     }
-  // this._emitUpdate() -- TODO: commented this generic event out, if things break then reinstate it. otherwise remove before merge
-  })
-})
 
-// notify when a user has joined a channel
-this.registerListener(cabal.memberships.events, 'add', (channel, user) => {
-  if (!this.channels[channel]) { 
-    this.channels[channel] = new ChannelDetails(this._cabal, channel)
-  }
-  this.channels[channel].addMember(user)
-  this._emitUpdate("channel-join", { channel, key: user, isLocal: user === this.user.key })
-})
-
-// notify when a user has left a channel
-this.registerListener(cabal.memberships.events, 'remove', (channel, user) => {
-  if (!this.channels[channel]) { 
-    this.channels[channel] = new ChannelDetails(this._cabal, channel)
-  }
-  this.channels[channel].removeMember(user)
-  this._emitUpdate("channel-leave", { channel, key: user, isLocal: user === this.user.key })
-})
-
-// register to be notified of new channels as they are created
-this.registerListener(cabal.channels.events, 'add', (channel) => {
-  let details = this.channels[channel]
-  if (!details) {
-    this.channels[channel] = new ChannelDetails(cabal, channel)
-  }
-  // TODO: only do this for our joined channels, instead of all channels
-  // Calls fn with every new message that arrives in channel.
-  cabal.messages.events.on(channel, this.messageListener.bind(this))
-  this._emitUpdate("new-channel", { channel })
-})
-
-cabal.users.getAll((err, users) => {
-  if (err) return
-  this.users = users
-  this._initializeUser(done)
-
-  this.registerListener(cabal.users.events, 'update', (key) => {
-    cabal.users.get(key, (err, user) => {
+    cabal.users.getAll((err, users) => {
       if (err) return
-      this.users[key] = Object.assign(this.users[key] || {}, user)
-      if (this.user && key === this.user.key) this.user = this.users[key]
-      this._emitUpdate("user-updated", { key, user })
-    })
-  })
 
-  this.registerListener(cabal.topics.events, 'update', (msg) => {
-      var { channel, text } = msg.value.content
-      if (!this.channels[channel]) { this.channels[channel] = new ChannelDetails(this._cabal, channel) }
-      this.channels[channel].topic = text || ''
-      this._emitUpdate("topic", { channel, topic: text || ''})
-  })
+      this.users = new Map()
+      Object.keys(users).forEach(key => {
+        this.users[key] = new User(users[key])
+      })
+      this._initializeLocalUser(() => {
+        loadModerationState(() => {
+          this.registerListener(cabal.moderation.events, 'update', (info) => {
+            let user = this.users[info.id]
+            if (!user) {
+              const flags = new Map()
+              flags.set(info.group, info.flags)
+              user = new User({key:info.id, flags: flags})
+              this.users[info.id] = user
+            } else {
+              user.flags.set(info.group, info.flags)
+            }
+            this._emitUpdate("user-updated", { key: info.id, user })
+            this.addStatusMessage(user.name + ' now has flags', info.flags)
+          })
+          done()
+        })
+      })
 
-  this.registerListener(cabal, 'peer-added', (key) => {
-    var found = false
-    Object.keys(this.users).forEach((k) => {
-      if (k === key) {
-        this.users[k].online = true
-        found = true
-      }
-    })
-    if (!found) {
-      this.users[key] = {
-        key,
-        online: true
-      }
-    }
-    this._emitUpdate("started-peering", { key, name: this.users[key].name || key })
-  })
+      this.registerListener(cabal.users.events, 'update', (key) => {
+        cabal.users.get(key, (err, user) => {
+          if (err) return
+          this.users[key] = new User(Object.assign(this.users[key] || {}, user))
+          if (this.user && key === this.user.key) this.user = this.users[key]
+          this._emitUpdate("user-updated", { key, user })
+        })
+      })
+
+      this.registerListener(cabal.topics.events, 'update', (msg) => {
+          var { channel, text } = msg.value.content
+          if (!this.channels[channel]) { this.channels[channel] = new ChannelDetails(this.core, channel) }
+          this.channels[channel].topic = text || ''
+          this._emitUpdate("topic", { channel, topic: text || ''})
+      })
+
+      this.registerListener(cabal, 'peer-added', (key) => {
+        if (this.users[key]) {
+          this.users[key].online = true
+        } else {
+          this.users[key] = new User({ key, online: true })
+        }
+        this._emitUpdate("started-peering", { key, name: this.users[key].name || key })
+      })
 
       this.registerListener(cabal, 'peer-dropped', (key) => {
         Object.keys(this.users).forEach((k) => {
@@ -684,4 +742,3 @@ cabal.users.getAll((err, users) => {
 function noop () {}
 
 module.exports = CabalDetails
-

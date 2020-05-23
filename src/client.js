@@ -1,5 +1,6 @@
 const Cabal = require('cabal-core')
 const CabalDetails = require('./cabal-details')
+const collect = require('collect-stream')
 const crypto = require('hypercore-crypto')
 const DatDns = require('dat-dns')
 const ram = require('random-access-memory')
@@ -110,8 +111,9 @@ class Client {
   resolveName (name, cb) {
     return this.cabalDns.resolveName(name).then((key) => {
       if (key === null) return null
-      if (!cb) return Client.scrubKey(key)
-      cb(Client.scrubKey(key))
+      key = Client.scrubKey(key)
+      if (!cb) return key
+      else cb(key)
     })
   }
 
@@ -128,10 +130,20 @@ class Client {
   /**
    * Add/load the cabal at `key`. 
    * @param {string} key 
+   * @param {object} opts
    * @param {function(string)} cb a function to be called when the cabal has been initialized.
    * @returns {Promise} a promise that resolves into a `CabalDetails` instance.
    */
-  addCabal (key, cb) {
+  addCabal (key, opts, cb) {
+    if (typeof key === 'object' && !opts) {
+      opts = key
+      key = undefined
+    }
+    if (typeof opts === 'function' && !cb) {
+      cb = opts
+      opts = {}
+    }
+    opts = opts || {}
     if (!cb || typeof cb !== 'function') cb = function noop () {}
     let cabalPromise
     let dnsFailed = false
@@ -146,7 +158,13 @@ class Client {
         const storage = temp ? ram : path.join(dbdir, resolvedKey)
         if (!temp) try { mkdirp.sync(path.join(dbdir, resolvedKey, 'views')) } catch (e) {}
         var db = temp ? memdb() : level(path.join(dbdir, resolvedKey, 'views'))
-        var cabal = Cabal(storage, resolvedKey, {db: db, maxFeeds: this.maxFeeds})
+
+        if (!key.startsWith('cabal://')) key = 'cabal://' + key
+        const uri = new URL(key)
+        const modKeys = uri.searchParams.getAll('mod')
+        const adminKeys = uri.searchParams.getAll('admin')
+
+        var cabal = Cabal(storage, resolvedKey, {modKeys, adminKeys, db: db, maxFeeds: this.maxFeeds})
         this._keyToCabal[resolvedKey] = cabal
         return cabal
       })
@@ -171,10 +189,13 @@ class Client {
             client: this,
             commands: this.commands,
             aliases: this.aliases,
-          }, cb)
+          }, done)
           this.cabals.set(cabal, details)
-          cabal.swarm()
-          resolve(details)
+          if (!opts.noSwarm) cabal.swarm()
+          function done () {
+            cb()
+            resolve(details)
+          }
         })
       })
     })
@@ -199,15 +220,16 @@ class Client {
    * Remove the cabal `key`. Destroys everything related to it 
    * (the data is however still persisted to disk, fret not!).
    * @param {string} key 
+   * @param {function} cb
    */
-  removeCabal (key) {
+  removeCabal (key, cb) {
     const cabal = this._coerceToCabal(key)
     if (!cabal) {
       return false
     }
 
     const details = this.cabalToDetails(cabal)
-    details._destroy()
+    details._destroy(cb)
 
     // burn everything we know about the cabal
     delete this._keyToCabal[key]
@@ -411,6 +433,7 @@ class Client {
     if (opts.newerThan) pageOpts.gt = parseInt(opts.newerThan) // if you fix the -1 hack above, make sure that backscroll in cabal-cli works
     if (opts.amount) pageOpts.limit = parseInt(opts.amount)
     if (!opts.channel) { opts.channel = details.getCurrentChannel() }
+
     const prom = details.getChannel(opts.channel).getPage(pageOpts)
     if (!cb) { return prom }
     prom.then(cb)
