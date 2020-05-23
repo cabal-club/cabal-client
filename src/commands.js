@@ -404,26 +404,42 @@ module.exports = {
   }
 }
 
-function getFullKey (details, key) {
-  const keys = Object.keys(details.getUsers())
-  return keys.filter((k) => k.startsWith(key))[0]
+function getNameKeyMatchesFromDetails (details, name) {
+  const lastDot = name.lastIndexOf('.')
+  const keyPrefix = name.slice(lastDot+1)
+  const namePrefix = name.slice(0, lastDot)
+  if (!keyPrefix.length || !namePrefix.length) return []
+
+  const keys = Object.values(details.getUsers())
+  return keys
+    .filter((u) => u.name.startsWith(namePrefix) && u.key.startsWith(keyPrefix))
+    .map(u => u.key)
 }
 
 function parseNameToKeys (details, name) {
   if (!name) return null
+
+  const keys = []
+
+  // If it's a 64-character key, use JUST this, since it's umabiguous.
   if (/^[0-9a-f]{64}$/.test(name)) {
     return [name]
   }
-  if (name.length !== 64 && /\./.test(name)) {
-    return [getFullKey(details, name.split('.')[1])]
+
+  // Is it NAME.KEYPREFIX (with exactly one match)?
+  if (/\./.test(name)) {
+    const matches = getNameKeyMatchesFromDetails(details, name)
+    Array.prototype.push.apply(keys, matches)
   }
+
+  // Is it a name?
   const users = details.getUsers()
-  var keys = []
   Object.keys(users).forEach(key => {
     if (users[key].name === name) {
       keys.push(key)
     }
   })
+
   return keys
 }
 
