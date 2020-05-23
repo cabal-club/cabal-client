@@ -1,2 +1,5 @@
+test/
+examples/
+.travis.yml
 wishlist.md
 doc-gen/
