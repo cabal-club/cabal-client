@@ -562,9 +562,9 @@ class CabalDetails extends EventEmitter {
     })
   }
 
-  _initializeLocalUser(done) {
+  _initializeLocalUser(cb) {
     this.core.getLocalKey((err, lkey) => {
-      if (err) return done(err)
+      if (err) return cb(err)
       this.user = new User()
       this.user.key = lkey
       this.user.local = true
@@ -573,8 +573,7 @@ class CabalDetails extends EventEmitter {
       // try to get more data for user
       this.core.users.get(lkey, (err, user) => {
         if (err || !user) { 
-            this._emitUpdate("init")
-            done(null)
+            cb(null)
             return
         }
         this.user = new User(user)
@@ -583,8 +582,7 @@ class CabalDetails extends EventEmitter {
         this.user.local = true
         this.user.online = true
         this.users[lkey] = this.user
-        this._emitUpdate("init") // TODO: revise this event (is it the final init?)
-        done(null)
+        cb(null)
       })
     })
   }
