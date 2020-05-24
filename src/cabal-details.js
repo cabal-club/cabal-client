@@ -2,6 +2,7 @@ const EventEmitter = require('events')
 const debug = require("debug")("cabal-client")
 const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
 const User = require("./user")
+const Moderation = require("./moderation")
 const collect = require('collect-stream')
 const { nextTick } = process
 
@@ -61,6 +62,7 @@ class CabalDetails extends EventEmitter {
       }
     }
     this.key = cabal.key
+    this.moderation = new Moderation(this.core)
     
     this.channels = {
       '!status': new VirtualChannelDetails("!status"),

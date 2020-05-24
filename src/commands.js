@@ -215,6 +215,36 @@ module.exports = {
       })
     }
   },
+  moderation: {
+    help: () => 'display moderation help and commands',
+    call: (cabal, res, arg) => {
+      const baseCmds = ["hide", "mod", "admin"]
+      const extraCmds = ["inspect", "ids"]
+      const debugCmds = ["flag", "flags"]
+      res.info("moderation commands")
+      res.info("\nbasic actions. the basic actions will be published to your log")
+      res.info("USAGE /<cmd> NICK{.PUBKEY} {REASON...}")
+      baseCmds.forEach((base) => {
+        res.info(`/${base}: ${module.exports[base].help()}`)
+        const reverse = `un${base}`
+        res.info(`/${reverse}: ${module.exports[reverse].help()}`)
+      })
+      res.info("\nlisting applied moderation actions. local actions (i.e. not published)")
+      baseCmds.forEach((base) => {
+        const list = `${base}s`
+        res.info(`/${list}: ${module.exports[list].help()}`)
+      })
+      res.info("\nadditional commands. local actions")
+      extraCmds.forEach((cmd) => {
+        res.info(`/${cmd}: ${module.exports[cmd].help()}`)
+      })
+      res.info("\ndebug commands")
+      debugCmds.forEach((cmd) => {
+        res.info(`/${cmd}: ${module.exports[cmd].help()}`)
+      })
+      res.end()
+    }
+  },
   hide: {
     help: () => 'hide a user from a channel or the whole cabal',
     call: (cabal, res, arg) => {
@@ -481,50 +511,42 @@ function flagCmd (cmd, cabal, res, arg) {
     return res.end()
   }
   id = keys[0]
-  var fname = /^un/.test(cmd) ? 'removeFlags' : 'addFlags'
+  var type = /^un/.test(cmd) ? 'remove' : 'add'
   var flag = cmd.replace(/^un/,'')
-  cabal.core.moderation[fname]({
-    id,
-    channel,
-    flags: [flag],
-    reason: args.slice(1).join(' ')
-  }, (err) => {
-    if (err) { res.error(err) }
-    else {
+  var reason = args.slice(1).join(' ')
+  cabal.moderation._flagCmd(flag, type, channel, id, reason).then(() => {
       res.info(`${/^un/.test(cmd) ? 'removed' : 'added'} flag ${flag} for ${id}`)
       res.end()
-    }
-  })
+  }).catch((err) => { res.error(err) })
 }
 
 function listCmd (cmd, cabal, res, arg) {
   var args = arg ? arg.split(/\s+/) : []
   var channel = '@'
-  pump(
-    cabal.core.moderation.listByFlag({ flag: cmd, channel }),
-    to.obj(write, end)
-  )
-  function write (row, enc, next) {
-    if (/^[0-9a-f]{64}@\d+$/.test(row.key)) {
-      cabal.core.getMessage(row.key, function (err, doc) {
-        if (err) return res.error(err)
-        res.info(Object.assign({}, row, {
-          text: `${cmd}: ${getPeerName(cabal, row.id)}: `
+
+  cabal.moderation._listCmd(cmd, channel).then((keys) => {
+    if (keys.length === 0) {
+      res.info(`you don't have any ${cmd}s`)
+      res.end()
+      return
+    }
+    keys.forEach((key) => {
+      if (/^[0-9a-f]{64}@\d+$/.test(key)) {
+        cabal.core.getMessage(key, function (err, doc) {
+          if (err) return res.error(err)
+          res.info(Object.assign({}, {
+            text: `${cmd}: ${getPeerName(cabal, key)}: `
             + (doc.timestamp ? strftime(' [%F %T] ', new Date(doc.timestamp)) : '')
             + (doc.content && doc.content.reason || '')
+          }))
+        })
+      } else {
+        res.info(Object.assign({}, {
+          text: `${cmd}: ${getPeerName(cabal, key)}`
         }))
-      })
-    } else {
-      res.info(Object.assign({}, row, {
-        text: `${cmd}: ${getPeerName(cabal, row.id)}`
-      }))
-    }
-    next()
-  }
-  function end (next) {
-    res.end()
-    next()
-  }
+      }
+    })
+  })
 }
 
 function ucfirst (s) {
