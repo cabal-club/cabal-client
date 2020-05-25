@@ -252,6 +252,7 @@ class CabalDetails extends EventEmitter {
    */
   addStatusMessage(message, channel=this.chname) {
     if (!this.channels[channel]) return
+    debug(channel)
     this.channels[channel].addVirtualMessage(message)
     this._emitUpdate("status-message", { channel, message })
   }

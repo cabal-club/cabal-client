@@ -43,6 +43,14 @@ module.exports = {
       })
     }
   },
+  share: { 
+    help: () => 'print a cabal key with you as admin. useful for sending to friends',
+    call: (cabal, res, arg) => {
+      const adminkey = `cabal://${cabal.key}?admin=${cabal.user.key}`
+      res.info(adminkey, { data: { adminkey }})
+      res.end()
+    }
+  },
   ids: {
     help: () => 'toggle showing ids at the end of nicks. useful for moderation',
     call: (cabal, res, arg) => {
