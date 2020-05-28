@@ -194,6 +194,7 @@ class Client {
           this.cabals.set(cabal, details)
           if (!opts.noSwarm) cabal.swarm()
           function done () {
+            details._emitUpdate('init')
             cb()
             resolve(details)
           }
