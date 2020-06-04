@@ -2,6 +2,8 @@ const EventEmitter = require('events')
 const debug = require("debug")("cabal-client")
 const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
 const User = require("./user")
+const to = require("to2")
+const pump = require("pump")
 const Moderation = require("./moderation")
 const collect = require('collect-stream')
 const { nextTick } = process
@@ -671,6 +673,26 @@ class CabalDetails extends EventEmitter {
 
     // Load moderation state
     const loadModerationState = (cb) => {
+	  const promises = [this.moderation.getAdmins(), this.moderation.getMods()]
+	  // get all moderation actions issued by our current mods & admins
+	  Promise.all(promises).then(results => {
+		const keys = results[0].concat(results[1])
+		keys.forEach(key => {
+		  const write = (row, enc, next) => {
+			if (!row) return
+			const name = this.users[key].name || key.slice(0, 8)
+			const target = this.users[row.content.id].name || row.content.id.slice(0, 8)
+			const action = row.type.split("/")[1]
+			const reason = row.content.reason
+			const role = row.content.flags[0]
+			const text = `${name} ${action === "remove" ? "removed" : "added"} ${target} as ${role} ${reason ? "reason: " + reason : ''}`
+			this.addStatusMessage({ text, timestamp: row.timestamp })
+			next()
+		  }
+		  const end = (next) => { next() }
+		  pump(this.core.moderation.listModerationBy(key), to.obj(write, end))
+		})
+      })
       cabal.moderation.list((err, list) => {
         if (err) return cb(err)
         list.forEach(info => {
@@ -683,29 +705,55 @@ class CabalDetails extends EventEmitter {
 
     cabal.users.getAll((err, users) => {
       if (err) return
-
       this.users = new Map()
       Object.keys(users).forEach(key => {
         this.users[key] = new User(users[key])
-      })
-      this._initializeLocalUser(() => {
-        loadModerationState(() => {
-          this.registerListener(cabal.moderation.events, 'update', (info) => {
-            let user = this.users[info.id]
-            if (!user) {
-              const flags = new Map()
-              flags.set(info.group, info.flags)
-              user = new User({key:info.id, flags: flags})
-              this.users[info.id] = user
-            } else {
-              user.flags.set(info.group, info.flags)
-            }
-            this._emitUpdate("user-updated", { key: info.id, user })
-            this.addStatusMessage(user.name + ' now has flags', info.flags)
-          })
-          done()
-        })
-      })
+	  })
+	  this._initializeLocalUser(() => {
+		loadModerationState(() => {
+		  this.registerListener(cabal.moderation.events, 'update', (info) => {
+			let user = this.users[info.id]
+			let changedRole = {}
+			if (!user) {
+			  const flags = new Map()
+			  flags.set(info.group, info.flags)
+			  user = new User({key:info.id, flags: flags})
+			  this.users[info.id] = user
+			} else {
+			  changedRole = { mod: user.isModerator(), admin: user.isAdmin(), hidden: user.isHidden() }
+			  user.flags.set(info.group, info.flags)
+			  changedRole.mod = changedRole.mod != user.isModerator()
+			  changedRole.admin = changedRole.admin != user.isAdmin()
+			  changedRole.hidden = changedRole.hidden != user.isHidden()
+			}
+			const issuer = this.users[info.by]
+			// don't print message if:
+			// * it is our own action (we already log that locally)
+			// * if the issuer wasn't one of our mods/admins
+			if (issuer.key === this.user.key || (!issuer.isModerator() && !issuer.isAdmin())) return 
+			const issuerName = issuer.name || info.by.slice(0, 8)
+			const role = Object.keys(changedRole).filter(k => changedRole[k])[0]
+			// there was no change in behaviour, e.g. someone modded an already
+			// modded person, hid someone that was already hidden
+			if (!role) return
+			let action, text
+			if (role === "admin") { action = user.isAdmin() ? "added" : "removed" }
+			if (role === "mod") { action = user.isModerator() ? "added" : "removed" }
+			if (role === "hidden") { action = user.isHidden() ? "hid" : "unhid" }
+
+			// TODO: show reason message. needs more info in secondary index to achieve 
+			if (role === "hidden")  {
+			  text = `${issuerName} ${action} ${user.name}`
+			} else {
+			  text = `${issuerName} ${action} ${user.name} as ${role}`
+			}
+
+			this._emitUpdate("user-updated", { key: info.id, user })
+			this.addStatusMessage({ text }, "!status")
+		  })
+		  done()
+		})
+	  })
 
       this.registerListener(cabal.users.events, 'update', (key) => {
         cabal.users.get(key, (err, user) => {
