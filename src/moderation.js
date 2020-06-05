@@ -44,7 +44,7 @@ class Moderation {
 
   addAdmin (id, opts) {
     opts = opts || {}
-    return this.setFlag('admin', 'add', id, opts.channel, opts.reason)
+    return this.setFlag('admin', 'add', opts.channel, id, opts.reason)
   }
 
   removeAdmin (id, opts) {
