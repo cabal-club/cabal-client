@@ -731,25 +731,29 @@ class CabalDetails extends EventEmitter {
 			// * it is our own action (we already log that locally)
 			// * if the issuer wasn't one of our mods/admins
 			if (issuer.key === this.user.key || (!issuer.isModerator() && !issuer.isAdmin())) return 
-			const issuerName = issuer.name || info.by.slice(0, 8)
-			const role = Object.keys(changedRole).filter(k => changedRole[k])[0]
-			// there was no change in behaviour, e.g. someone modded an already
-			// modded person, hid someone that was already hidden
-			if (!role) return
-			let action, text
-			if (role === "admin") { action = user.isAdmin() ? "added" : "removed" }
-			if (role === "mod") { action = user.isModerator() ? "added" : "removed" }
-			if (role === "hidden") { action = user.isHidden() ? "hid" : "unhid" }
-
-			// TODO: show reason message. needs more info in secondary index to achieve 
-			if (role === "hidden")  {
-			  text = `${issuerName} ${action} ${user.name}`
-			} else {
-			  text = `${issuerName} ${action} ${user.name} as ${role}`
-			}
-
-			this._emitUpdate("user-updated", { key: info.id, user })
-			this.addStatusMessage({ text }, "!status")
+			this.core.getMessage(info.key, (err, doc) => {
+			  const issuerName = issuer.name || info.by.slice(0, 8)
+			  const role = doc.content.flags[0]
+			  const reason = doc.content.reason.? `(reason: ${doc.content.reason})` : ''
+			  // there was no change in behaviour, e.g. someone modded an already
+			  // modded person, hid someone that was already hidden
+			  const changeOccurred = Object.keys(changedRole).filter(r => changedRole[r]).length > 0
+			  if (!changeOccurred) { 
+				this._emitUpdate("user-updated", { key: info.id, user })
+				return
+			  }
+			  const type = doc.type.replace(/^flags\//, '')
+			  let action, text
+			  if (["admin", "mod"].includes(role)) { action = (type === "add" ? "added" : "removed") }
+			  if (role === "hide") { action = (type === "add" ? "hid" : "unhid") }
+			  if (role === "hide")  {
+				text = `${issuerName} ${action} ${user.name} ${reason}`
+			  } else {
+				text = `${issuerName} ${action} ${user.name} as ${role} ${reason}`
+			  }
+			  this._emitUpdate("user-updated", { key: info.id, user })
+			  this.addStatusMessage({ text }, "!status")
+			})
 		  })
 		  done()
 		})
