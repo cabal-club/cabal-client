@@ -227,7 +227,7 @@ module.exports = {
     help: () => 'display moderation help and commands',
     call: (cabal, res, arg) => {
       const baseCmds = ["hide", "mod", "admin"]
-      const extraCmds = ["inspect", "ids"]
+      const extraCmds = ["ids", "actions", "roles", "inspect"]
       const debugCmds = ["flag", "flags"]
       res.info("moderation commands")
       res.info("\nbasic actions. the basic actions will be published to your log")
@@ -326,17 +326,57 @@ module.exports = {
     }
   },
   actions: {
-    help: () => '',
+    help: () => 'print out a historic log of the moderation actions applied by you, your active moderators and admins',
     call: (cabal, res, arg) => {
-      // todo
-      res.end()
+	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
+	  // get all moderation actions issued by our current mods & admins
+	  Promise.all(promises).then(results => {
+		const keys = results[0].concat(results[1])
+		keys.forEach(key => {
+		  const write = (row, enc, next) => {
+			if (!row) return
+			const name = cabal.users[key].name || key.slice(0, 8)
+			const target = cabal.users[row.content.id].name || row.content.id.slice(0, 8)
+			const type = row.type.split("/")[1]
+			const reason = row.content.reason
+			const role = row.content.flags[0]
+			const datestr = strftime('[%F %T] ', new Date(row.timestamp))
+			let text, action
+			if (["admin", "mod"].includes(role)) { action = (type === "add" ? "added" : "removed") }
+			if (role === "hide") { action = (type === "add" ? "hid" : "unhid") }
+			if (role === "hide")  {
+			  text = `${datestr} ${name} ${action} ${target} ${reason}`
+			} else {
+			  text = `${datestr} ${name} ${action} ${target} as ${role} ${reason}`
+			}
+			res.info({ text })
+			next()
+		  }
+		  const end = (next) => { next() }
+		  pump(cabal.core.moderation.listModerationBy(key), to.obj(write, end))
+		})
+		res.end()
+      })
     },
   },
   roles: {
-    help: () => '',
+    help: () => 'list all your current moderators and admins',
     call: (cabal, res, arg) => {
-      // todo
-      res.end()
+	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
+	  Promise.all(promises).then(results => {
+		const keys = results[0].concat(results[1])
+		const print = (type) => {
+		  return (k) => {
+			res.info(`${cabal.users[k] ? cabal.users[k].name : k.slice(0, 8) }: ${type}`)
+		  }
+		}
+		res.info("moderation roles")
+		const printMods = print("moderator")
+		const printAdmins = print("admin")
+		results[0].map(printAdmins)
+		results[1].map(printMods)
+		res.end()
+	  })
     },
   },
   inspect: {

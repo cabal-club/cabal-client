@@ -673,26 +673,6 @@ class CabalDetails extends EventEmitter {
 
     // Load moderation state
     const loadModerationState = (cb) => {
-	  const promises = [this.moderation.getAdmins(), this.moderation.getMods()]
-	  // get all moderation actions issued by our current mods & admins
-	  Promise.all(promises).then(results => {
-		const keys = results[0].concat(results[1])
-		keys.forEach(key => {
-		  const write = (row, enc, next) => {
-			if (!row) return
-			const name = this.users[key].name || key.slice(0, 8)
-			const target = this.users[row.content.id].name || row.content.id.slice(0, 8)
-			const action = row.type.split("/")[1]
-			const reason = row.content.reason
-			const role = row.content.flags[0]
-			const text = `${name} ${action === "remove" ? "removed" : "added"} ${target} as ${role} ${reason ? "reason: " + reason : ''}`
-			this.addStatusMessage({ text, timestamp: row.timestamp })
-			next()
-		  }
-		  const end = (next) => { next() }
-		  pump(this.core.moderation.listModerationBy(key), to.obj(write, end))
-		})
-      })
       cabal.moderation.list((err, list) => {
         if (err) return cb(err)
         list.forEach(info => {
@@ -734,7 +714,7 @@ class CabalDetails extends EventEmitter {
 			this.core.getMessage(info.key, (err, doc) => {
 			  const issuerName = issuer.name || info.by.slice(0, 8)
 			  const role = doc.content.flags[0]
-			  const reason = doc.content.reason.? `(reason: ${doc.content.reason})` : ''
+			  const reason = doc.content.reason ? `(reason: ${doc.content.reason})` : ''
 			  // there was no change in behaviour, e.g. someone modded an already
 			  // modded person, hid someone that was already hidden
 			  const changeOccurred = Object.keys(changedRole).filter(r => changedRole[r]).length > 0
