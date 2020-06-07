@@ -5,6 +5,7 @@ const User = require("./user")
 const to = require("to2")
 const pump = require("pump")
 const Moderation = require("./moderation")
+const timestamp = require("monotonic-timestamp")
 const collect = require('collect-stream')
 const { nextTick } = process
 
@@ -714,7 +715,7 @@ class CabalDetails extends EventEmitter {
 			this.core.getMessage(info.key, (err, doc) => {
 			  const issuerName = issuer.name || info.by.slice(0, 8)
 			  const role = doc.content.flags[0]
-			  const reason = doc.content.reason ? `(reason: ${doc.content.reason})` : ''
+			  const reason = doc.content.reason || ''
 			  // there was no change in behaviour, e.g. someone modded an already
 			  // modded person, hid someone that was already hidden
 			  const changeOccurred = Object.keys(changedRole).filter(r => changedRole[r]).length > 0
@@ -731,8 +732,30 @@ class CabalDetails extends EventEmitter {
 			  } else {
 				text = `${issuerName} ${action} ${user.name} as ${role} ${reason}`
 			  }
+			  const obj = { issuer: info.by, receiver: info.id, role, type, reason }
 			  this._emitUpdate("user-updated", { key: info.id, user })
-			  this.addStatusMessage({ text }, "!status")
+
+			  const msg = {
+				key: "!status",
+				value: {
+				  timestamp: timestamp(),
+				  type: "chat/moderation",
+				  content: {
+					text,
+					issuerid: info.by,
+					receiverid: info.id,
+					role,
+					type,
+					reason
+				  }
+				}
+			  }
+              // add to !status channel, to have a canonical log of all moderation actions in one place
+			  this.addStatusMessage(msg, "!status")
+              // also add to the currently focused channel, so that the moderation action isn't missed
+              if (this.chname !== "!status") {
+                this.addStatusMessage(msg)
+              }
 			})
 		  })
 		  done()

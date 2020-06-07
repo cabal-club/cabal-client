@@ -332,6 +332,7 @@ module.exports = {
 	  // get all moderation actions issued by our current mods & admins
 	  Promise.all(promises).then(results => {
 		const keys = results[0].concat(results[1])
+        // TODO: collect and sort messages according to timestamp, before emitting them
 		keys.forEach(key => {
 		  const write = (row, enc, next) => {
 			if (!row) return
