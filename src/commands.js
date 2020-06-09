@@ -577,7 +577,7 @@ function flagCmd (cmd, cabal, res, arg) {
   var type = /^un/.test(cmd) ? 'remove' : 'add'
   var flag = cmd.replace(/^un/,'')
   var reason = args.slice(1).join(' ')
-  cabal.moderation._flagCmd(flag, type, channel, id, reason).then(() => {
+  cabal.moderation.setFlag(flag, type, channel, id, reason).then(() => {
 	  if (["admin", "mod"].includes(flag)) {
 		if (/^un/.test(cmd) && flag === "mod" && !cabal.users[id].isModerator()) {
 		  res.error(`${getPeerName(cabal, id)} is not a mod`)
