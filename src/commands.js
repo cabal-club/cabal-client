@@ -330,10 +330,22 @@ module.exports = {
     call: (cabal, res, arg) => {
 	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
 	  // get all moderation actions issued by our current mods & admins
+      const messages = []
+      function processMessages (messages) {
+        messages.sort((a, b) => { return a.timestamp - b.timestamp })
+        messages.forEach((message) => {
+          res.info(message.text)
+        })
+      }
 	  Promise.all(promises).then(results => {
 		const keys = results[0].concat(results[1])
-        // TODO: collect and sort messages according to timestamp, before emitting them
-		keys.forEach(key => {
+        listNextKey()
+        function listNextKey () {
+          if (keys.length === 0) {
+            processMessages(messages)
+            return res.end()
+          }
+          var key = keys.shift()
 		  const write = (row, enc, next) => {
 			if (!row) return
 			const name = cabal.users[key].name || key.slice(0, 8)
@@ -350,13 +362,15 @@ module.exports = {
 			} else {
 			  text = `${datestr} ${name} ${action} ${target} as ${role} ${reason}`
 			}
-			res.info({ text })
+            messages.push({ text, timestamp: parseFloat(row.timestamp) })
 			next()
 		  }
-		  const end = (next) => { next() }
+		  const end = (next) => { 
+            listNextKey()
+            next() 
+          }
 		  pump(cabal.core.moderation.listModerationBy(key), to.obj(write, end))
-		})
-		res.end()
+		}
       })
     },
   },
