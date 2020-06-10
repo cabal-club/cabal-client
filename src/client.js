@@ -13,7 +13,7 @@ const defaultCommands = require('./commands')
 
 class Client {
   /**
-   * Create a client instance from which to manage multiple 
+   * Create a client instance from which to manage multiple
    * [`cabal-core`](https://github.com/cabal-club/cabal-core/) instances.
    * @constructor
    * @param {object} [opts]
@@ -51,7 +51,7 @@ class Client {
       })
     })
 
-    let cabalDnsOpts = {
+    const cabalDnsOpts = {
       hashRegex: /^[0-9a-f]{64}?$/i,
       recordName: 'cabal',
       protocolRegex: /^(cabal:\/\/[0-9A-Fa-f]{64}\b.*)/i,
@@ -65,7 +65,7 @@ class Client {
   }
 
   /**
-   * Get the current database version. 
+   * Get the current database version.
    * @returns {string}
    */
   static getDatabaseVersion () {
@@ -73,7 +73,7 @@ class Client {
   }
 
   /**
-   * Returns a 64 character hex string i.e. a newly generated cabal key. 
+   * Returns a 64 character hex string i.e. a newly generated cabal key.
    * Useful if you want to programmatically create a new cabal as part of a shell pipeline.
    * @returns {string}
    */
@@ -84,7 +84,7 @@ class Client {
   /**
    * Removes URI scheme and returns the cabal key as a 64 character hex string
    * @param {string} key the key to scrub
-   * @returns {string} the scrubbed key 
+   * @returns {string} the scrubbed key
    * @example
    * Client.scrubKey('cabal://12345678...')
    * // => '12345678...'
@@ -102,7 +102,7 @@ class Client {
   }
 
   /**
-   * Resolve the DNS shortname `name`. If `name` is already a cabal key,  it will 
+   * Resolve the DNS shortname `name`. If `name` is already a cabal key,  it will
    * be returned and the DNS lookup is aborted.
    * Returns the cabal key in `cb`. If `cb` is null a Promise is returned.
    * @param {string} name the DNS shortname
@@ -126,10 +126,9 @@ class Client {
     return this.addCabal(key, cb)
   }
 
-
   /**
-   * Add/load the cabal at `key`. 
-   * @param {string} key 
+   * Add/load the cabal at `key`.
+   * @param {string} key
    * @param {object} opts
    * @param {function(string)} cb a function to be called when the cabal has been initialized.
    * @returns {Promise} a promise that resolves into a `CabalDetails` instance.
@@ -154,7 +153,7 @@ class Client {
           dnsFailed = true
           return
         }
-        let {temp, dbdir} = this.config
+        let { temp, dbdir } = this.config
         dbdir = dbdir || path.join(Client.getCabalDirectory(), 'archives')
         const storage = temp ? ram : path.join(dbdir, resolvedKey)
         if (!temp) try { mkdirp.sync(path.join(dbdir, resolvedKey, 'views')) } catch (e) {}
@@ -165,7 +164,7 @@ class Client {
         const modKeys = uri.searchParams.getAll('mod')
         const adminKeys = uri.searchParams.getAll('admin')
 
-        var cabal = Cabal(storage, resolvedKey, {modKeys, adminKeys, db: db, maxFeeds: this.maxFeeds})
+        var cabal = Cabal(storage, resolvedKey, { modKeys, adminKeys, db: db, maxFeeds: this.maxFeeds })
         this._keyToCabal[resolvedKey] = cabal
         return cabal
       })
@@ -189,7 +188,7 @@ class Client {
             cabal,
             client: this,
             commands: this.commands,
-            aliases: this.aliases,
+            aliases: this.aliases
           }, done)
           this.cabals.set(cabal, details)
           if (!opts.noSwarm) cabal.swarm()
@@ -213,15 +212,15 @@ class Client {
       return false
     }
     this.currentCabal = cabal
-    let details = this.cabalToDetails(cabal)
-    details._emitUpdate("cabal-focus", { key })
+    const details = this.cabalToDetails(cabal)
+    details._emitUpdate('cabal-focus', { key })
     return details
   }
 
   /**
-   * Remove the cabal `key`. Destroys everything related to it 
+   * Remove the cabal `key`. Destroys everything related to it
    * (the data is however still persisted to disk, fret not!).
-   * @param {string} key 
+   * @param {string} key
    * @param {function} cb
    */
   removeCabal (key, cb) {
@@ -272,7 +271,7 @@ class Client {
    * @param {array} [cmd.alias] array of string aliases
    * @param {function} [cmd.call] implementation of the command receiving (cabal, res, arg) arguments
    */
-  addCommand(name, cmd) {
+  addCommand (name, cmd) {
     this.commands[name] = cmd
     ;(cmd.alias || []).forEach(alias => {
       this.aliases[alias] = name
@@ -283,7 +282,7 @@ class Client {
    * Remove a command.
    * @param {string} [name] the command name
    */
-  removeCommand(name) {
+  removeCommand (name) {
     var cmd = this.commands[name]
     ;(cmd.alias || []).forEach(alias => {
       delete this.aliases[alias]
@@ -303,7 +302,7 @@ class Client {
    * @param {string} [longCmd] command to be aliased
    * @param {string} [shortCmd] alias
    */
-  addAlias(longCmd, shortCmd) {
+  addAlias (longCmd, shortCmd) {
     this.aliases[shortCmd] = longCmd
     this.commands[longCmd].alias.push(shortCmd)
   }
@@ -311,7 +310,7 @@ class Client {
   /**
    * Returns the `cabal-core` instance corresponding to the cabal key `key`. `key` is scrubbed internally.
    * @method
-   * @param {string} key 
+   * @param {string} key
    * @returns {Cabal} the `cabal-core` instance
    * @access private
    */
@@ -339,8 +338,8 @@ class Client {
   }
 
   /**
-   * Add a status message, displayed client-side only, to the specified channel and cabal. 
-   * If no cabal is specified, the currently focused cabal is used. 
+   * Add a status message, displayed client-side only, to the specified channel and cabal.
+   * If no cabal is specified, the currently focused cabal is used.
    * @param {object} message
    * @param {string} channel
    * @param {Cabal} [cabal=this.currentCabal]
@@ -351,16 +350,16 @@ class Client {
 
   /**
    * Clear status messages for the specified channel.
-   * @param {string} channel 
-   * @param {Cabal} [cabal=this.currentCabal] 
+   * @param {string} channel
+   * @param {Cabal} [cabal=this.currentCabal]
    */
   clearStatusMessages (channel, cabal = this.currentCabal) {
     this.cabalToDetails(cabal).clearVirtualMessages(channel)
   }
 
   /**
-   * Returns a list of all the users for the specified cabal. 
-   * If no cabal is specified, the currently focused cabal is used. 
+   * Returns a list of all the users for the specified cabal.
+   * If no cabal is specified, the currently focused cabal is used.
    * @param {Cabal} [cabal=this.currentCabal]
    * @returns {Object[]} the list of users
    */
@@ -369,8 +368,8 @@ class Client {
   }
 
   /**
-   * Returns a list of channels the user has joined for the specified cabal. 
-   * If no cabal is specified, the currently focused cabal is used. 
+   * Returns a list of channels the user has joined for the specified cabal.
+   * If no cabal is specified, the currently focused cabal is used.
    * @param {Cabal} [cabal=this.currentCabal]
    * @returns {Object[]} the list of Channels
    */
@@ -379,8 +378,8 @@ class Client {
   }
 
   /**
-   * Returns a list of all channels for the specified cabal. 
-   * If no cabal is specified, the currently focused cabal is used. 
+   * Returns a list of all channels for the specified cabal.
+   * If no cabal is specified, the currently focused cabal is used.
    * @param {Cabal} [cabal=this.currentCabal]
    * @returns {Object[]} the list of Channels
    */
@@ -397,7 +396,7 @@ class Client {
 
   /**
    * Add a new listener for the `update` event.
-   * @param {function} listener 
+   * @param {function} listener
    * @param {Cabal} [cabal=this.currentCabal]
    */
   subscribe (listener, cabal = this.currentCabal) {
@@ -406,7 +405,7 @@ class Client {
 
   /**
    * Remove a previously added listener.
-   * @param {function} listener 
+   * @param {function} listener
    * @param {Cabal} [cabal=this.currentCabal]
    */
   unsubscribe (listener, cabal = this.currentCabal) {
@@ -415,7 +414,7 @@ class Client {
 
   /**
    * Returns a list of messages according to `opts`. If `cb` is null, a Promise is returned.
-   * @param {Object} [opts] 
+   * @param {Object} [opts]
    * @param {number} [opts.olderThan] timestamp in epoch time. we want to get messages that are *older* than this ts
    * @param {number} [opts.newerThan] timestamp in epoch time. we want to get messages that are *newer* than this ts
    * @param {number} [opts.amount] amount of messages to get
@@ -441,11 +440,11 @@ class Client {
     prom.then(cb)
   }
 
-    /**
+  /**
    * Searches for messages that include the search string according to `opts`.
    * Each returned match contains a message string and a matchedIndexes array containing the indexes at which the search string was found in the message
    * @param {string} [searchString] string to match messages against
-   * @param {Object} [opts] 
+   * @param {Object} [opts]
    * @param {number} [opts.olderThan] timestamp in epoch time. we want to search through messages that are *older* than this ts
    * @param {number} [opts.newerThan] timestamp in epoch time. we want to search through messages that are *newer* than this ts
    * @param {number} [opts.amount] amount of messages to be search through
@@ -465,20 +464,19 @@ class Client {
 
       this.getMessages(opts, null, cabal).then((messages) => {
         messages.forEach(message => {
-          let messageContent = message.value.content
+          const messageContent = message.value.content
           if (messageContent) {
-            let textBuffer = Buffer.from(messageContent.text)
+            const textBuffer = Buffer.from(messageContent.text)
 
             /* positions at which the string was found, can be used for highlighting for example */
-            let matchedIndexes = []
+            const matchedIndexes = []
 
             /* use a labeled for-loop to cleanly continue top-level iteration */
             charIteration:
             for (let charIndex = 0; charIndex <= textBuffer.length - searchBuffer.length; charIndex++) {
-                if (textBuffer[charIndex] == searchBuffer[0]) {
-                  for (let searchIndex = 0; searchIndex < searchBuffer.length; searchIndex++) {         
-                    if (!(textBuffer[charIndex + searchIndex] == searchBuffer[searchIndex])) 
-                      continue charIteration
+              if (textBuffer[charIndex] == searchBuffer[0]) {
+                for (let searchIndex = 0; searchIndex < searchBuffer.length; searchIndex++) {
+                  if (!(textBuffer[charIndex + searchIndex] == searchBuffer[searchIndex])) { continue charIteration }
                 }
                 matchedIndexes.push(charIndex)
               }
@@ -496,20 +494,20 @@ class Client {
 
   /**
    * Returns the number of unread messages for `channel`.
-   * @param {string} channel    
+   * @param {string} channel
    * @param {Cabal} [cabal=this.currentCabal]
    * @returns {number}
    */
   getNumberUnreadMessages (channel, cabal = this.currentCabal) {
     var details = this.cabalToDetails(cabal)
     if (!channel) { channel = details.getCurrentChannel() }
-    let count = this.cabalToDetails(cabal).getChannel(channel).getNewMessageCount()
+    const count = this.cabalToDetails(cabal).getChannel(channel).getNewMessageCount()
     return count
   }
 
   /**
    * Returns the number of mentions in `channel`.
-   * @param {string} [channel=this.getCurrentChannel()] 
+   * @param {string} [channel=this.getCurrentChannel()]
    * @param {Cabal} [cabal=this.currentCabal]
    */
   getNumberMentions (channel, cabal = this.currentCabal) {
@@ -518,7 +516,7 @@ class Client {
 
   /**
    * Returns a list of messages that triggered a mention in channel.
-   * @param {string} [channel=this.getCurrentChannel()] 
+   * @param {string} [channel=this.getCurrentChannel()]
    * @param {Cabal} [cabal=this.currentCabal]
    */
   getMentions (channel, cabal = this.currentCabal) {
@@ -527,7 +525,7 @@ class Client {
 
   /**
    * View `channel`, closing the previously focused channel.
-   * @param {*} [channel=this.getCurrentChannel()]  
+   * @param {*} [channel=this.getCurrentChannel()]
    * @param {boolean} [keepUnread=false]
    * @param {Cabal} [cabal=this.currentCabal]
    */
@@ -537,8 +535,8 @@ class Client {
 
   /**
    * Close `channel`.
-   * @param {string} [channel=this.getCurrentChannel()] 
-   * @param {string} [newChannel=null] 
+   * @param {string} [channel=this.getCurrentChannel()]
+   * @param {string} [newChannel=null]
    * @param {Cabal} [cabal=this.currentCabal]
    */
   unfocusChannel (channel, newChannel, cabal = this.currentCabal) {
@@ -555,7 +553,7 @@ class Client {
 
   /**
    * Mark the channel as read.
-   * @param {string} channel 
+   * @param {string} channel
    * @param {Cabal} [cabal=this.currentCabal]
    */
   markChannelRead (channel, cabal = this.currentCabal) {

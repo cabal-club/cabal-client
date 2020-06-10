@@ -1,6 +1,6 @@
 'use strict'
 
-function stableSort(li, valueFunc = v => v) {
+function stableSort (li, valueFunc = v => v) {
   if (li.length === 1) {
     return li
   }
@@ -8,12 +8,12 @@ function stableSort(li, valueFunc = v => v) {
   return merge(li.slice(0, midpoint), li.slice(midpoint), valueFunc)
 
   return merge(
-    stableSort(li.slice(0, midpoint), valueFunc), 
-    stableSort(li.slice(midpoint), valueFunc), 
+    stableSort(li.slice(0, midpoint), valueFunc),
+    stableSort(li.slice(midpoint), valueFunc),
     valueFunc)
 }
 
-function merge(left, right, valueFunc = v => v) {
+function merge (left, right, valueFunc = v => v) {
   if (left.length === 0) {
     return right
   }
@@ -24,7 +24,7 @@ function merge(left, right, valueFunc = v => v) {
   const res = []
   let lIndex = 0
   let rIndex = 0
-  while(lIndex < left.length && rIndex < right.length) {
+  while (lIndex < left.length && rIndex < right.length) {
     const lVal = valueFunc(left[lIndex])
     const rVal = valueFunc(right[rIndex])
     if (lVal <= rVal) {
@@ -33,14 +33,14 @@ function merge(left, right, valueFunc = v => v) {
       res.push(right[rIndex++])
     }
   }
-  
+
   if (lIndex === left.length) {
     res.push(...right.slice(rIndex))
   } else {
     res.push(...left.slice(lIndex))
   }
-  
+
   return res
 }
 
-module.exports = { merge, stableSort}
+module.exports = { merge, stableSort }
