@@ -227,7 +227,7 @@ module.exports = {
     help: () => 'display moderation help and commands',
     call: (cabal, res, arg) => {
       const baseCmds = ["hide", "mod", "admin"]
-      const extraCmds = ["inspect", "ids"]
+      const extraCmds = ["ids", "actions", "roles", "inspect"]
       const debugCmds = ["flag", "flags"]
       res.info("moderation commands")
       res.info("\nbasic actions. the basic actions will be published to your log")
@@ -326,17 +326,81 @@ module.exports = {
     }
   },
   actions: {
-    help: () => '',
+    help: () => 'print out a historic log of the moderation actions applied by you, and your active moderators & admins',
     call: (cabal, res, arg) => {
-      // todo
-      res.end()
+	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
+	  // get all moderation actions issued by our current mods & admins
+      const messages = []
+      function processMessages (messages) {
+        res.info("moderation actions")
+        if (messages.length === 0) {
+          res.info("no recorded historic moderation actions")
+        }
+        messages.sort((a, b) => { return a.timestamp - b.timestamp })
+        messages.forEach((message) => {
+          res.info(message.text)
+        })
+      }
+	  Promise.all(promises).then(results => {
+		const keys = results[0].concat(results[1])
+        listNextKey()
+        function listNextKey () {
+          if (keys.length === 0) {
+            processMessages(messages)
+            return res.end()
+          }
+          var key = keys.shift()
+		  const write = (row, enc, next) => {
+			if (!row) return
+			const name = cabal.users[key] ? cabal.users[key].name : key.slice(0, 8)
+			const target = cabal.users[row.content.id] ? cabal.users[row.content.id].name : row.content.id.slice(0, 8)
+			const type = row.type.split("/")[1]
+			const reason = row.content.reason
+			const role = row.content.flags[0]
+			const datestr = strftime('[%F %T] ', new Date(row.timestamp))
+			let text, action
+			if (["admin", "mod"].includes(role)) { action = (type === "add" ? "added" : "removed") }
+			if (role === "hide") { action = (type === "add" ? "hid" : "unhid") }
+			if (role === "hide")  {
+			  text = `${datestr} ${name} ${action} ${target} ${reason}`
+			} else {
+			  text = `${datestr} ${name} ${action} ${target} as ${role} ${reason}`
+			}
+            messages.push({ text, timestamp: parseFloat(row.timestamp) })
+			next()
+		  }
+		  const end = (next) => { 
+            listNextKey()
+            next() 
+          }
+		  pump(cabal.core.moderation.listModerationBy(key), to.obj(write, end))
+		}
+      })
     },
   },
   roles: {
-    help: () => '',
+    help: () => 'list all your current moderators and admins',
     call: (cabal, res, arg) => {
-      // todo
-      res.end()
+	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
+	  Promise.all(promises).then(results => {
+		const keys = results[0].concat(results[1])
+		const print = (type) => {
+		  return (k) => {
+			res.info(`${cabal.users[k] ? cabal.users[k].name : k.slice(0, 8) }: ${type}`)
+		  }
+		}
+		res.info("moderation roles")
+        if (keys.length === 1 && keys[0] === cabal.getLocalUser().key) {
+          res.info("you currently have no applied moderators or admins, other than yourself")
+          res.info("see /moderation, for how to add some")
+          return res.end()
+        }
+		const printMods = print("moderator")
+		const printAdmins = print("admin")
+		results[0].map(printAdmins)
+		results[1].map(printMods)
+		res.end()
+	  })
     },
   },
   inspect: {
@@ -522,8 +586,29 @@ function flagCmd (cmd, cabal, res, arg) {
   var type = /^un/.test(cmd) ? 'remove' : 'add'
   var flag = cmd.replace(/^un/,'')
   var reason = args.slice(1).join(' ')
-  cabal.moderation._flagCmd(flag, type, channel, id, reason).then(() => {
-      res.info(`${/^un/.test(cmd) ? 'removed' : 'added'} flag ${flag} for ${id}`)
+  const reasonstr = reason ? '(reason: ' + reason + ')' : ''
+  cabal.moderation.setFlag(flag, type, channel, id, reason).then(() => {
+	  if (['admin', 'mod'].includes(flag)) {
+		if (/^un/.test(cmd) && flag === 'mod' && !cabal.users[id].isModerator()) {
+		  res.error(`${getPeerName(cabal, id)} is not a mod`)
+		} else if (/^un/.test(cmd) && flag === 'admin' && !cabal.users[id].isAdmin()) {
+		  res.error(`${getPeerName(cabal, id)} is not an admin`)
+		} else if (!/^un/.test(cmd) && flag === 'mod' && cabal.users[id].isModerator()) {
+		  res.error(`${getPeerName(cabal, id)} is already a mod`)
+		} else if (!/^un/.test(cmd) && flag === 'admin' && cabal.users[id].isAdmin()) {
+		  res.error(`${getPeerName(cabal, id)} is already an admin`)
+		} else {
+		  res.info(`${/^un/.test(cmd) ? 'removed' : 'added'} ${flag} for ${getPeerName(cabal, id)} ${reasonstr}`)
+		}
+	  } else {
+		if (/^un/.test(cmd)) {
+		  if (!cabal.users[id].isHidden()) { res.error(`cannot unhide ${getPeerName(cabal, id)}: they are not hidden`) }
+		  else { res.info(`removed hide for ${getPeerName(cabal, id)} ${reasonstr}`) }
+		} else {
+		  if (cabal.users[id].isHidden()) { res.error(`${getPeerName(cabal, id)} is already hidden`) }
+		  else { res.info(`${getPeerName(cabal, id)}'s messages are now hidden ${reasonstr}`) }
+		}
+	  }
       res.end()
   }).catch((err) => { res.error(err) })
 }

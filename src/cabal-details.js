@@ -2,7 +2,10 @@ const EventEmitter = require('events')
 const debug = require("debug")("cabal-client")
 const { VirtualChannelDetails, ChannelDetails } = require("./channel-details")
 const User = require("./user")
+const to = require("to2")
+const pump = require("pump")
 const Moderation = require("./moderation")
+const timestamp = require("monotonic-timestamp")
 const collect = require('collect-stream')
 const { nextTick } = process
 
@@ -681,29 +684,81 @@ class CabalDetails extends EventEmitter {
 
     cabal.users.getAll((err, users) => {
       if (err) return
-
       this.users = new Map()
       Object.keys(users).forEach(key => {
         this.users[key] = new User(users[key])
-      })
-      this._initializeLocalUser(() => {
-        loadModerationState(() => {
-          this.registerListener(cabal.moderation.events, 'update', (info) => {
-            let user = this.users[info.id]
-            if (!user) {
-              const flags = new Map()
-              flags.set(info.group, info.flags)
-              user = new User({key:info.id, flags: flags})
-              this.users[info.id] = user
-            } else {
-              user.flags.set(info.group, info.flags)
-            }
-            this._emitUpdate("user-updated", { key: info.id, user })
-            this.addStatusMessage(user.name + ' now has flags', info.flags)
-          })
-          done()
-        })
-      })
+	  })
+	  this._initializeLocalUser(() => {
+		loadModerationState(() => {
+		  this.registerListener(cabal.moderation.events, 'update', (info) => {
+			let user = this.users[info.id]
+			let changedRole = {}
+			if (!user) {
+			  const flags = new Map()
+			  flags.set(info.group, info.flags)
+			  user = new User({key:info.id, flags: flags})
+			  this.users[info.id] = user
+			} else {
+			  changedRole = { mod: user.isModerator(), admin: user.isAdmin(), hidden: user.isHidden() }
+			  user.flags.set(info.group, info.flags)
+			  changedRole.mod = changedRole.mod != user.isModerator()
+			  changedRole.admin = changedRole.admin != user.isAdmin()
+			  changedRole.hidden = changedRole.hidden != user.isHidden()
+			}
+			const issuer = this.users[info.by]
+			// don't print message if:
+			// * it is our own action (we already log that locally)
+			// * if the issuer wasn't one of our mods/admins
+			if (issuer.key === this.user.key || (!issuer.isModerator() && !issuer.isAdmin())) return 
+			this.core.getMessage(info.key, (err, doc) => {
+			  const issuerName = issuer.name || info.by.slice(0, 8)
+			  const role = doc.content.flags[0]
+			  const reason = doc.content.reason || ''
+			  // there was no change in behaviour, e.g. someone modded an already
+			  // modded person, hid someone that was already hidden
+			  const changeOccurred = Object.keys(changedRole).filter(r => changedRole[r]).length > 0
+			  if (!changeOccurred) { 
+				this._emitUpdate("user-updated", { key: info.id, user })
+				return
+			  }
+			  const type = doc.type.replace(/^flags\//, '')
+			  let action, text
+			  if (["admin", "mod"].includes(role)) { action = (type === "add" ? "added" : "removed") }
+			  if (role === "hide") { action = (type === "add" ? "hid" : "unhid") }
+			  if (role === "hide")  {
+				text = `${issuerName} ${action} ${user.name} ${reason}`
+			  } else {
+				text = `${issuerName} ${action} ${user.name} as ${role} ${reason}`
+			  }
+			  const obj = { issuer: info.by, receiver: info.id, role, type, reason }
+			  this._emitUpdate("user-updated", { key: info.id, user })
+
+			  const msg = {
+				key: "!status",
+				value: {
+				  timestamp: timestamp(),
+				  type: "chat/moderation",
+				  content: {
+					text,
+					issuerid: info.by,
+					receiverid: info.id,
+					role,
+					type,
+					reason
+				  }
+				}
+			  }
+              // add to !status channel, to have a canonical log of all moderation actions in one place
+			  this.addStatusMessage(msg, "!status")
+              // also add to the currently focused channel, so that the moderation action isn't missed
+              if (this.chname !== "!status") {
+                this.addStatusMessage(msg)
+              }
+			})
+		  })
+		  done()
+		})
+	  })
 
       this.registerListener(cabal.users.events, 'update', (key) => {
         cabal.users.get(key, (err, user) => {

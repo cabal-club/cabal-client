@@ -79,12 +79,12 @@ class ChannelDetailsBase {
 
   getVirtualMessages(opts) {
     const limit = opts.limit
-    const newerThan = opts.gt || 0
-    const olderThan = opts.lt || Infinity
+    const newerThan = parseFloat(opts.gt || 0)
+    const olderThan = parseFloat(opts.lt || Infinity)
     var filtered = this.virtualMessages.filter((m) => {
-      return (m.value.timestamp > newerThan && m.value.timestamp < olderThan)
+      return (parseFloat(m.value.timestamp) > newerThan && parseFloat(m.value.timestamp) < olderThan)
     })
-    return stableSort(filtered, v => v.value.timestamp).slice(-limit)
+    return stableSort(filtered, v => parseFloat(v.value.timestamp)).slice(-limit)
   }
 
   interleaveVirtualMessages(messages, opts) {
@@ -197,7 +197,7 @@ class VirtualChannelDetails extends ChannelDetailsBase {
   }
 
   getPage(opts) {
-    return Promise.resolve(this.getVirtualMessages(opts))
+    return Promise.resolve(this.interleaveVirtualMessages([], opts))
   }
 }
 
