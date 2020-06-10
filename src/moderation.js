@@ -44,7 +44,7 @@ class Moderation {
 
   addAdmin (id, opts) {
     opts = opts || {}
-    return this.setFlag('admin', 'add', id, opts.channel, opts.reason)
+    return this.setFlag('admin', 'add', opts.channel, id, opts.reason)
   }
 
   removeAdmin (id, opts) {
@@ -64,25 +64,27 @@ class Moderation {
 
   setFlag (flag, type, channel='@', id, reason='') {
     // a list of [[id, reason]] was passed in
-    if (typeof id[Symbol.iterator] === 'function') {
-      const promises = id.map((entry) => { return new Promise((resolve, reject) => {
-        this._flagCmd(flag, type, channel, entry[0], entry[1], (err) => {
-          if (err) { return reject(err) }
-          else { resolve() }
-        })
-      })
-        return Promise.all(promises)
-      })
-    }
+	if (typeof id === "object" && typeof id[Symbol.iterator] === 'function') {
+	  const promises = id.map((entry) => { 
+		return new Promise((resolve, reject) => {
+		  this._flagCmd(flag, type, channel, entry[0], entry[1], (err) => {
+			if (err) { return reject(err) }
+			else { resolve() }
+		  })
+		})
+	  })
+	  return Promise.all(promises)
+	}
     return new Promise((resolve, reject) => {
-      this._flagCmd(flag, type, id, channel, reason, (err) => {
+      this._flagCmd(flag, type, channel, id, reason, (err) => {
         if (err) { return reject(err) }
         else { resolve() }
       })
     })
   }
 
-  // type should be either 'add' or 'remove'
+  // * type should be either 'add' or 'remove'. 
+  // * if cb not provided, a read-only stream is returned
   _flagCmd (flag, type, channel='@', id, reason='', cb) {
     const fname = (type === 'add' ? 'addFlags' : 'removeFlags')
     return this.core.moderation[fname]({
