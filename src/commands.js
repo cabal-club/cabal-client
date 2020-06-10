@@ -326,12 +326,16 @@ module.exports = {
     }
   },
   actions: {
-    help: () => 'print out a historic log of the moderation actions applied by you, your active moderators and admins',
+    help: () => 'print out a historic log of the moderation actions applied by you, and your active moderators & admins',
     call: (cabal, res, arg) => {
 	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
 	  // get all moderation actions issued by our current mods & admins
       const messages = []
       function processMessages (messages) {
+        res.info("moderation actions")
+        if (messages.length === 0) {
+          res.info("no recorded historic moderation actions")
+        }
         messages.sort((a, b) => { return a.timestamp - b.timestamp })
         messages.forEach((message) => {
           res.info(message.text)
@@ -386,6 +390,11 @@ module.exports = {
 		  }
 		}
 		res.info("moderation roles")
+        if (keys.length === 1 && keys[0] === cabal.getLocalUser().key) {
+          res.info("you currently have no applied moderators or admins, other than yourself")
+          res.info("see /moderation, for how to add some")
+          return res.end()
+        }
 		const printMods = print("moderator")
 		const printAdmins = print("admin")
 		results[0].map(printAdmins)
