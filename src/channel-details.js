@@ -1,9 +1,9 @@
 const collect = require('collect-stream')
-const timestamp = require("monotonic-timestamp")
+const timestamp = require('monotonic-timestamp')
 const { stableSort, merge } = require('./util')
 
 class ChannelDetailsBase {
-  constructor(channelName) {
+  constructor (channelName) {
     this.name = channelName
 
     this.members = new Set()
@@ -11,17 +11,17 @@ class ChannelDetailsBase {
     this.virtualMessages = []
     this.newMessageCount = 0
     this.datesSeen = new Set()
-    /* TODO: 
-    use cursor to remember scrollback state and fetch 
-    from leveldb.  
-    maybe store a negative offset to look up?*/
+    /* TODO:
+    use cursor to remember scrollback state and fetch
+    from leveldb.
+    maybe store a negative offset to look up? */
     this.lastRead = 0 /* timestamp in epoch time */
     this.joined = false
     this.focused = false
     this.topic = ''
   }
 
-  toString() {
+  toString () {
     return this.name
   }
 
@@ -29,7 +29,7 @@ class ChannelDetailsBase {
     this.members.add(key)
   }
 
-  removeMember(key) {
+  removeMember (key) {
     this.members.delete(key)
   }
 
@@ -37,39 +37,39 @@ class ChannelDetailsBase {
     return Array.from(this.members)
   }
 
-  addMention(mention) {
+  addMention (mention) {
     if (!this.focused) {
       this.mentions.push(mention)
     }
   }
 
-  getMentions() {
+  getMentions () {
     return this.mentions.slice() // return copy
   }
 
-  handleMessage(message) {
+  handleMessage (message) {
     if (!this.focused) {
       // ++var is an optimization:
       // var++ creates a temporary variable while ++var doesn't
       ++this.newMessageCount
     }
   }
-  
-  getNewMessageCount() {
+
+  getNewMessageCount () {
     return this.newMessageCount
   }
 
-  markAsRead() {
+  markAsRead () {
     this.lastRead = Date.now()
     this.newMessageCount = 0
     this.mentions = []
   }
 
-  focus() {
+  focus () {
     this.focused = true
   }
 
-  unfocus() {
+  unfocus () {
     this.focused = false
   }
 
@@ -77,7 +77,7 @@ class ChannelDetailsBase {
     this.virtualMessages = []
   }
 
-  getVirtualMessages(opts) {
+  getVirtualMessages (opts) {
     const limit = opts.limit
     const newerThan = parseFloat(opts.gt || 0)
     const olderThan = parseFloat(opts.lt || Infinity)
@@ -87,15 +87,15 @@ class ChannelDetailsBase {
     return stableSort(filtered, v => parseFloat(v.value.timestamp)).slice(-limit)
   }
 
-  interleaveVirtualMessages(messages, opts) {
+  interleaveVirtualMessages (messages, opts) {
     const virtualMessages = this.getVirtualMessages(opts)
     var cmp = (a, b) => {
       // sort by timestamp
-      let diff = parseFloat(a.value.timestamp) - parseFloat(b.value.timestamp) 
+      const diff = parseFloat(a.value.timestamp) - parseFloat(b.value.timestamp)
       // if timestamp was the same, and messages are by same author, sort by seqno
-      if (diff === 0 
-        && a.key && b.key && a.key === b.key 
-        && a.hasOwnProperty("seq") && b.hasOwnProperty("seq")) {
+      if (diff === 0 &&
+        a.key && b.key && a.key === b.key &&
+        a.hasOwnProperty('seq') && b.hasOwnProperty('seq')) {
         return a.seq - b.seq
       }
       return diff
@@ -106,11 +106,11 @@ class ChannelDetailsBase {
   /*
   addVirtualMessage({ timestamp: Date.now(), type: "status", text: "" }})
   */
-  addVirtualMessage(msg) {
+  addVirtualMessage (msg) {
     /*
     msg will be on the format of
-    {timestamp, type, text} 
-    but we convert it to the format that cabal expects messages to conform to 
+    {timestamp, type, text}
+    but we convert it to the format that cabal expects messages to conform to
      msg = {
        key: ''
        value: {
@@ -122,30 +122,30 @@ class ChannelDetailsBase {
        }
      }
      */
-     if (!msg.value) {
-       msg = {
-         key: this.name,
-         value: {
-           timestamp: msg.timestamp || timestamp(),
-           type: msg.type || "status",
-           content: {
-             text: msg.text
-           }
-         }
-       }
-     }
-     this.virtualMessages.push(msg)
-   }
+    if (!msg.value) {
+      msg = {
+        key: this.name,
+        value: {
+          timestamp: msg.timestamp || timestamp(),
+          type: msg.type || 'status',
+          content: {
+            text: msg.text
+          }
+        }
+      }
+    }
+    this.virtualMessages.push(msg)
+  }
 
   // returns false if we were already in the channel, otherwise true
-  join() {
+  join () {
     var joined = this.joined
     this.joined = true
     return joined
   }
 
   // returns true if we were previously in the channel, otherwise false
-  leave() {
+  leave () {
     var joined = this.joined
     this.joined = false
     return joined
@@ -153,12 +153,12 @@ class ChannelDetailsBase {
 }
 
 class ChannelDetails extends ChannelDetailsBase {
-  constructor(cabal, channelName) {
+  constructor (cabal, channelName) {
     super(channelName)
     this.messages = cabal.messages
   }
 
-  getPage(opts) {
+  getPage (opts) {
     opts = opts || {}
     const OGopts = Object.assign({}, opts)
     return new Promise((resolve, reject) => {
@@ -172,7 +172,7 @@ class ChannelDetails extends ChannelDetailsBase {
           const msg = msgs[i]
           reversed.push(msg)
           const msgTime = msg.value.timestamp
-          const dayTimestamp = msgTime - (msgTime % (24*60*60*1000))
+          const dayTimestamp = msgTime - (msgTime % (24 * 60 * 60 * 1000))
           if (!this.datesSeen.has(dayTimestamp)) {
             this.datesSeen.add(dayTimestamp)
             this.addVirtualMessage({
@@ -186,17 +186,17 @@ class ChannelDetails extends ChannelDetailsBase {
         }
         resolve(this.interleaveVirtualMessages(reversed, OGopts))
       })
-    }) 
+    })
   }
 }
 
 class VirtualChannelDetails extends ChannelDetailsBase {
-  constructor(channelName) {
+  constructor (channelName) {
     super(channelName)
     this.joined = true
   }
 
-  getPage(opts) {
+  getPage (opts) {
     return Promise.resolve(this.interleaveVirtualMessages([], opts))
   }
 }

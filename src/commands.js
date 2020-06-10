@@ -6,7 +6,7 @@ const strftime = require('strftime')
 module.exports = {
   add: {
     help: () => 'add a cabal',
-    alias: [ 'cabal' ],
+    alias: ['cabal'],
     call: (cabal, res, arg) => {
       if (arg === '') {
         res.info('Usage example: /add <cabalkey>')
@@ -30,7 +30,7 @@ module.exports = {
   },
   nick: {
     help: () => 'change your display name',
-    alias: [ 'n' ],
+    alias: ['n'],
     call: (cabal, res, arg) => {
       if (arg === '') {
         res.info(cabal.user.name)
@@ -43,25 +43,25 @@ module.exports = {
       })
     }
   },
-  share: { 
+  share: {
     help: () => 'print a cabal key with you as admin. useful for sending to friends',
     call: (cabal, res, arg) => {
       const adminkey = `cabal://${cabal.key}?admin=${cabal.user.key}`
-      res.info(adminkey, { data: { adminkey }})
+      res.info(adminkey, { data: { adminkey } })
       res.end()
     }
   },
   ids: {
     help: () => 'toggle showing ids at the end of nicks. useful for moderation',
     call: (cabal, res, arg) => {
-        cabal.showIds = !cabal.showIds
-        res.info(`toggled identifiers ${cabal.showIds ? "on" : "off"}`)
-        res.end()
+      cabal.showIds = !cabal.showIds
+      res.info(`toggled identifiers ${cabal.showIds ? 'on' : 'off'}`)
+      res.end()
     }
   },
   emote: {
     help: () => 'write an old-school text emote',
-    alias: [ 'me' ],
+    alias: ['me'],
     call: (cabal, res, arg) => {
       cabal.publishMessage({
         type: 'chat/emote',
@@ -141,7 +141,7 @@ module.exports = {
   },
   leave: {
     help: () => 'leave a channel',
-    alias: ['l','part'],
+    alias: ['l', 'part'],
     call: (cabal, res, arg) => {
       arg = (arg || '').trim().replace(/^#/, '')
       if (arg === '!status') return
@@ -172,7 +172,7 @@ module.exports = {
   },
   topic: {
     help: () => 'set the topic/description/`message of the day` for a channel',
-    alias: [ 'motd' ],
+    alias: ['motd'],
     call: (cabal, res, arg) => {
       cabal.publishChannelTopic(cabal.channel, arg, (err) => {
         if (err) res.error(err)
@@ -182,7 +182,7 @@ module.exports = {
   },
   whoami: {
     help: () => 'display your local user key',
-    alias: [ 'key' ],
+    alias: ['key'],
     call: (cabal, res, arg) => {
       res.info('Local user key: ' + cabal.getLocalUser().key)
       res.end()
@@ -192,7 +192,7 @@ module.exports = {
     help: () => 'display the public keys associated with the passed in nick',
     call: (cabal, res, arg) => {
       if (!arg) {
-        res.info(`usage: /whois <nick>`)
+        res.info('usage: /whois <nick>')
         res.end()
         return
       }
@@ -210,7 +210,7 @@ module.exports = {
     help: () => 'show raw information about a message from a KEY@SEQ',
     call: (cabal, res, arg) => {
       var args = (arg || '').split(/\s+/)
-      if (args[0].length === 0) { 
+      if (args[0].length === 0) {
         res.info('usage: /baninfo KEY@SEQ')
         return res.end()
       }
@@ -226,27 +226,27 @@ module.exports = {
   moderation: {
     help: () => 'display moderation help and commands',
     call: (cabal, res, arg) => {
-      const baseCmds = ["hide", "mod", "admin"]
-      const extraCmds = ["ids", "actions", "roles", "inspect"]
-      const debugCmds = ["flag", "flags"]
-      res.info("moderation commands")
-      res.info("\nbasic actions. the basic actions will be published to your log")
-      res.info("USAGE /<cmd> NICK{.PUBKEY} {REASON...}")
+      const baseCmds = ['hide', 'mod', 'admin']
+      const extraCmds = ['ids', 'actions', 'roles', 'inspect']
+      const debugCmds = ['flag', 'flags']
+      res.info('moderation commands')
+      res.info('\nbasic actions. the basic actions will be published to your log')
+      res.info('USAGE /<cmd> NICK{.PUBKEY} {REASON...}')
       baseCmds.forEach((base) => {
         res.info(`/${base}: ${module.exports[base].help()}`)
         const reverse = `un${base}`
         res.info(`/${reverse}: ${module.exports[reverse].help()}`)
       })
-      res.info("\nlisting applied moderation actions. local actions (i.e. not published)")
+      res.info('\nlisting applied moderation actions. local actions (i.e. not published)')
       baseCmds.forEach((base) => {
         const list = `${base}s`
         res.info(`/${list}: ${module.exports[list].help()}`)
       })
-      res.info("\nadditional commands. local actions")
+      res.info('\nadditional commands. local actions')
       extraCmds.forEach((cmd) => {
         res.info(`/${cmd}: ${module.exports[cmd].help()}`)
       })
-      res.info("\ndebug commands")
+      res.info('\ndebug commands')
       debugCmds.forEach((cmd) => {
         res.info(`/${cmd}: ${module.exports[cmd].help()}`)
       })
@@ -281,7 +281,7 @@ module.exports = {
     help: () => 'unblock a user',
     call: (cabal, res, arg) => {
       flagCmd('unblock', cabal, res, arg)
-    },
+    }
   },
   blocks: {
     help: () => 'list blocks',
@@ -299,7 +299,7 @@ module.exports = {
     help: () => 'remove a user as a moderator',
     call: (cabal, res, arg) => {
       flagCmd('unmod', cabal, res, arg)
-    },
+    }
   },
   mods: {
     help: () => 'list mods',
@@ -317,7 +317,7 @@ module.exports = {
     help: () => 'remove a user as an admin',
     call: (cabal, res, arg) => {
       flagCmd('unadmin', cabal, res, arg)
-    },
+    }
   },
   admins: {
     help: () => 'list admins',
@@ -332,9 +332,9 @@ module.exports = {
 	  // get all moderation actions issued by our current mods & admins
       const messages = []
       function processMessages (messages) {
-        res.info("moderation actions")
+        res.info('moderation actions')
         if (messages.length === 0) {
-          res.info("no recorded historic moderation actions")
+          res.info('no recorded historic moderation actions')
         }
         messages.sort((a, b) => { return a.timestamp - b.timestamp })
         messages.forEach((message) => {
@@ -342,7 +342,7 @@ module.exports = {
         })
       }
 	  Promise.all(promises).then(results => {
-		const keys = results[0].concat(results[1])
+        const keys = results[0].concat(results[1])
         listNextKey()
         function listNextKey () {
           if (keys.length === 0) {
@@ -351,64 +351,64 @@ module.exports = {
           }
           var key = keys.shift()
 		  const write = (row, enc, next) => {
-			if (!row) return
-			const name = cabal.users[key] ? cabal.users[key].name : key.slice(0, 8)
-			const target = cabal.users[row.content.id] ? cabal.users[row.content.id].name : row.content.id.slice(0, 8)
-			const type = row.type.split("/")[1]
-			const reason = row.content.reason
-			const role = row.content.flags[0]
-			const datestr = strftime('[%F %T] ', new Date(row.timestamp))
-			let text, action
-			if (["admin", "mod"].includes(role)) { action = (type === "add" ? "added" : "removed") }
-			if (role === "hide") { action = (type === "add" ? "hid" : "unhid") }
-			if (role === "hide")  {
+            if (!row) return
+            const name = cabal.users[key] ? cabal.users[key].name : key.slice(0, 8)
+            const target = cabal.users[row.content.id] ? cabal.users[row.content.id].name : row.content.id.slice(0, 8)
+            const type = row.type.split('/')[1]
+            const reason = row.content.reason
+            const role = row.content.flags[0]
+            const datestr = strftime('[%F %T] ', new Date(row.timestamp))
+            let text, action
+            if (['admin', 'mod'].includes(role)) { action = (type === 'add' ? 'added' : 'removed') }
+            if (role === 'hide') { action = (type === 'add' ? 'hid' : 'unhid') }
+            if (role === 'hide') {
 			  text = `${datestr} ${name} ${action} ${target} ${reason}`
-			} else {
+            } else {
 			  text = `${datestr} ${name} ${action} ${target} as ${role} ${reason}`
-			}
+            }
             messages.push({ text, timestamp: parseFloat(row.timestamp) })
-			next()
+            next()
 		  }
-		  const end = (next) => { 
+		  const end = (next) => {
             listNextKey()
-            next() 
+            next()
           }
 		  pump(cabal.core.moderation.listModerationBy(key), to.obj(write, end))
-		}
+        }
       })
-    },
+    }
   },
   roles: {
     help: () => 'list all your current moderators and admins',
     call: (cabal, res, arg) => {
 	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
 	  Promise.all(promises).then(results => {
-		const keys = results[0].concat(results[1])
-		const print = (type) => {
+        const keys = results[0].concat(results[1])
+        const print = (type) => {
 		  return (k) => {
-			res.info(`${cabal.users[k] ? cabal.users[k].name : k.slice(0, 8) }: ${type}`)
+            res.info(`${cabal.users[k] ? cabal.users[k].name : k.slice(0, 8)}: ${type}`)
 		  }
-		}
-		res.info("moderation roles")
+        }
+        res.info('moderation roles')
         if (keys.length === 1 && keys[0] === cabal.getLocalUser().key) {
-          res.info("you currently have no applied moderators or admins, other than yourself")
-          res.info("see /moderation, for how to add some")
+          res.info('you currently have no applied moderators or admins, other than yourself')
+          res.info('see /moderation, for how to add some')
           return res.end()
         }
-		const printMods = print("moderator")
-		const printAdmins = print("admin")
-		results[0].map(printAdmins)
-		results[1].map(printMods)
-		res.end()
+        const printMods = print('moderator')
+        const printAdmins = print('admin')
+        results[0].map(printAdmins)
+        results[1].map(printMods)
+        res.end()
 	  })
-    },
+    }
   },
   inspect: {
     help: () => 'view moderation actions published by a user',
     call: (cabal, res, arg) => {
       var args = arg ? arg.split(/\s+/) : []
       if (args.length === 0) {
-        res.info(`usage: /inspect NICK{.PUBKEY}`)
+        res.info('usage: /inspect NICK{.PUBKEY}')
         return res.end()
       }
       var keys = parseNameToKeys(cabal, args[0])
@@ -416,7 +416,7 @@ module.exports = {
       function listNextKey () {
         if (keys.length === 0) return res.end()
         var key = keys.shift()
-        res.info(`# moderation for ${getPeerName(cabal, key)}.${key.slice(0,8)}`)
+        res.info(`# moderation for ${getPeerName(cabal, key)}.${key.slice(0, 8)}`)
         pump(cabal.core.moderation.listModerationBy(key), to.obj(write, end))
         function write (row, enc, next) {
           var c = {
@@ -427,9 +427,9 @@ module.exports = {
           var f = (row.content && row.content.flags || []).join(',')
           var id = row.content && row.content.id || '???'
           res.info(Object.assign({}, row, {
-            text: `${c}${f} ${getPeerName(cabal, id)}.${id.slice(0,8)} `
-              + (row.timestamp ? strftime('[%F %T] ', new Date(row.timestamp)) : '')
-              + (row.content && row.content.reason || '')
+            text: `${c}${f} ${getPeerName(cabal, id)}.${id.slice(0, 8)} ` +
+              (row.timestamp ? strftime('[%F %T] ', new Date(row.timestamp)) : '') +
+              (row.content && row.content.reason || '')
           }))
           next()
         }
@@ -438,16 +438,16 @@ module.exports = {
           next()
         }
       }
-    },
+    }
   },
   flag: {
     help: () => 'update and read flags set for a given account',
     call: (cabal, res, arg) => {
       var args = arg ? arg.split(/\s+/) : []
       if (args.length === 0) {
-        res.info(`usage: /flag (add|remove|set) NICK{.PUBKEY} [flags...]`)
-        res.info(`usage: /flag get NICK{.PUBKEY}`)
-        res.info(`usage: /flag list`)
+        res.info('usage: /flag (add|remove|set) NICK{.PUBKEY} [flags...]')
+        res.info('usage: /flag get NICK{.PUBKEY}')
+        res.info('usage: /flag list')
         return res.end()
       }
       var channel = '@'
@@ -456,14 +456,14 @@ module.exports = {
         var keys = parseNameToKeys(cabal, args[1])
         var flags = args.slice(2)
         if (keys.length > 1) {
-          res.info(`more than one key matches:`)
+          res.info('more than one key matches:')
           keys.forEach(key => {
             res.info(`  /flag ${cmd} ${args[1]}.${key} ${flags}`)
           })
           return res.end()
         }
         var id = keys[0]
-        cabal.core.moderation[cmd+'Flags']({ id, channel, flags }, (err) => {
+        cabal.core.moderation[cmd + 'Flags']({ id, channel, flags }, (err) => {
           if (err) res.error(err)
           else res.end()
         })
@@ -474,8 +474,8 @@ module.exports = {
           cabal.core.moderation.getFlags({ id, channel }, (err, flags) => {
             if (err) return res.error(err)
             res.info({
-              text: `${id}: `
-                + flags.map(flag => /\s/.test(flag) ? JSON.stringify(flag) : flag)
+              text: `${id}: ` +
+                flags.map(flag => /\s/.test(flag) ? JSON.stringify(flag) : flag)
                   .sort().join(' '),
               key: id,
               flags
@@ -486,7 +486,7 @@ module.exports = {
       } else if (args[0] === 'list') {
         module.exports.flags.call(cabal, res, arg)
       }
-    },
+    }
   },
   flags: {
     help: () => 'list flags set for accounts',
@@ -502,13 +502,13 @@ module.exports = {
         })
         res.end()
       })
-    },
+    }
   }
 }
 
 function getNameKeyMatchesFromDetails (details, name) {
   const lastDot = name.lastIndexOf('.')
-  const keyPrefix = name.slice(lastDot+1)
+  const keyPrefix = name.slice(lastDot + 1)
   const namePrefix = name.slice(0, lastDot)
   if (!keyPrefix.length || !namePrefix.length) return []
 
@@ -564,11 +564,11 @@ function cmpUser (a, b) {
 
 function flagCmd (cmd, cabal, res, arg) {
   var args = arg ? arg.split(/\s+/) : []
-  if (args.length === 0) { 
+  if (args.length === 0) {
     res.info(`usage: /${cmd} NICK{.PUBKEY} {REASON...}`)
     return res.end()
   }
-  let channel = "@"
+  const channel = '@'
   var id = args[0]
   var keys = parseNameToKeys(cabal, id)
   if (keys.length === 0) {
@@ -576,7 +576,7 @@ function flagCmd (cmd, cabal, res, arg) {
     return res.end()
   }
   if (keys.length > 1) {
-    res.info(`more than one key matches:`)
+    res.info('more than one key matches:')
     keys.forEach(key => {
       res.info(`  /${cmd} ${id.split('.')[0]}.${key}`)
     })
@@ -584,32 +584,30 @@ function flagCmd (cmd, cabal, res, arg) {
   }
   id = keys[0]
   var type = /^un/.test(cmd) ? 'remove' : 'add'
-  var flag = cmd.replace(/^un/,'')
+  var flag = cmd.replace(/^un/, '')
   var reason = args.slice(1).join(' ')
   const reasonstr = reason ? '(reason: ' + reason + ')' : ''
   cabal.moderation.setFlag(flag, type, channel, id, reason).then(() => {
 	  if (['admin', 'mod'].includes(flag)) {
-		if (/^un/.test(cmd) && flag === 'mod' && !cabal.users[id].isModerator()) {
+      if (/^un/.test(cmd) && flag === 'mod' && !cabal.users[id].isModerator()) {
 		  res.error(`${getPeerName(cabal, id)} is not a mod`)
-		} else if (/^un/.test(cmd) && flag === 'admin' && !cabal.users[id].isAdmin()) {
+      } else if (/^un/.test(cmd) && flag === 'admin' && !cabal.users[id].isAdmin()) {
 		  res.error(`${getPeerName(cabal, id)} is not an admin`)
-		} else if (!/^un/.test(cmd) && flag === 'mod' && cabal.users[id].isModerator()) {
+      } else if (!/^un/.test(cmd) && flag === 'mod' && cabal.users[id].isModerator()) {
 		  res.error(`${getPeerName(cabal, id)} is already a mod`)
-		} else if (!/^un/.test(cmd) && flag === 'admin' && cabal.users[id].isAdmin()) {
+      } else if (!/^un/.test(cmd) && flag === 'admin' && cabal.users[id].isAdmin()) {
 		  res.error(`${getPeerName(cabal, id)} is already an admin`)
-		} else {
+      } else {
 		  res.info(`${/^un/.test(cmd) ? 'removed' : 'added'} ${flag} for ${getPeerName(cabal, id)} ${reasonstr}`)
-		}
+      }
 	  } else {
-		if (/^un/.test(cmd)) {
-		  if (!cabal.users[id].isHidden()) { res.error(`cannot unhide ${getPeerName(cabal, id)}: they are not hidden`) }
-		  else { res.info(`removed hide for ${getPeerName(cabal, id)} ${reasonstr}`) }
-		} else {
-		  if (cabal.users[id].isHidden()) { res.error(`${getPeerName(cabal, id)} is already hidden`) }
-		  else { res.info(`${getPeerName(cabal, id)}'s messages are now hidden ${reasonstr}`) }
-		}
+      if (/^un/.test(cmd)) {
+		  if (!cabal.users[id].isHidden()) { res.error(`cannot unhide ${getPeerName(cabal, id)}: they are not hidden`) } else { res.info(`removed hide for ${getPeerName(cabal, id)} ${reasonstr}`) }
+      } else {
+		  if (cabal.users[id].isHidden()) { res.error(`${getPeerName(cabal, id)} is already hidden`) } else { res.info(`${getPeerName(cabal, id)}'s messages are now hidden ${reasonstr}`) }
+      }
 	  }
-      res.end()
+    res.end()
   }).catch((err) => { res.error(err) })
 }
 
@@ -628,9 +626,9 @@ function listCmd (cmd, cabal, res, arg) {
         cabal.core.getMessage(key, function (err, doc) {
           if (err) return res.error(err)
           res.info(Object.assign({}, {
-            text: `${cmd}: ${getPeerName(cabal, key)}: `
-            + (doc.timestamp ? strftime(' [%F %T] ', new Date(doc.timestamp)) : '')
-            + (doc.content && doc.content.reason || '')
+            text: `${cmd}: ${getPeerName(cabal, key)}: ` +
+            (doc.timestamp ? strftime(' [%F %T] ', new Date(doc.timestamp)) : '') +
+            (doc.content && doc.content.reason || '')
           }))
         })
       } else {

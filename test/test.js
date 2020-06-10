@@ -78,4 +78,3 @@ test('check that local user is admin', function (t) {
       t.error(err)
     })
 })
-
