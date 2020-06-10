@@ -348,8 +348,8 @@ module.exports = {
           var key = keys.shift()
 		  const write = (row, enc, next) => {
 			if (!row) return
-			const name = cabal.users[key].name || key.slice(0, 8)
-			const target = cabal.users[row.content.id].name || row.content.id.slice(0, 8)
+			const name = cabal.users[key] ? cabal.users[key].name : key.slice(0, 8)
+			const target = cabal.users[row.content.id] ? cabal.users[row.content.id].name : row.content.id.slice(0, 8)
 			const type = row.type.split("/")[1]
 			const reason = row.content.reason
 			const role = row.content.flags[0]
@@ -577,26 +577,27 @@ function flagCmd (cmd, cabal, res, arg) {
   var type = /^un/.test(cmd) ? 'remove' : 'add'
   var flag = cmd.replace(/^un/,'')
   var reason = args.slice(1).join(' ')
+  const reasonstr = reason ? '(reason: ' + reason + ')' : ''
   cabal.moderation.setFlag(flag, type, channel, id, reason).then(() => {
-	  if (["admin", "mod"].includes(flag)) {
-		if (/^un/.test(cmd) && flag === "mod" && !cabal.users[id].isModerator()) {
+	  if (['admin', 'mod'].includes(flag)) {
+		if (/^un/.test(cmd) && flag === 'mod' && !cabal.users[id].isModerator()) {
 		  res.error(`${getPeerName(cabal, id)} is not a mod`)
-		} else if (/^un/.test(cmd) && flag === "admin" && !cabal.users[id].isAdmin()) {
+		} else if (/^un/.test(cmd) && flag === 'admin' && !cabal.users[id].isAdmin()) {
 		  res.error(`${getPeerName(cabal, id)} is not an admin`)
-		} else if (!/^un/.test(cmd) && flag === "mod" && cabal.users[id].isModerator()) {
+		} else if (!/^un/.test(cmd) && flag === 'mod' && cabal.users[id].isModerator()) {
 		  res.error(`${getPeerName(cabal, id)} is already a mod`)
-		} else if (!/^un/.test(cmd) && flag === "admin" && cabal.users[id].isAdmin()) {
+		} else if (!/^un/.test(cmd) && flag === 'admin' && cabal.users[id].isAdmin()) {
 		  res.error(`${getPeerName(cabal, id)} is already an admin`)
 		} else {
-		  res.info(`${/^un/.test(cmd) ? 'removed' : 'added'} ${flag} for ${getPeerName(cabal, id)}`)
+		  res.info(`${/^un/.test(cmd) ? 'removed' : 'added'} ${flag} for ${getPeerName(cabal, id)} ${reasonstr}`)
 		}
 	  } else {
 		if (/^un/.test(cmd)) {
 		  if (!cabal.users[id].isHidden()) { res.error(`cannot unhide ${getPeerName(cabal, id)}: they are not hidden`) }
-		  else { res.info(`removed hide for ${getPeerName(cabal, id)}`) }
+		  else { res.info(`removed hide for ${getPeerName(cabal, id)} ${reasonstr}`) }
 		} else {
 		  if (cabal.users[id].isHidden()) { res.error(`${getPeerName(cabal, id)} is already hidden`) }
-		  else { res.info(`${getPeerName(cabal, id)}'s messages are now hidden`) }
+		  else { res.info(`${getPeerName(cabal, id)}'s messages are now hidden ${reasonstr}`) }
 		}
 	  }
       res.end()
