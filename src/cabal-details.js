@@ -705,6 +705,7 @@ class CabalDetails extends EventEmitter {
               changedRole.hidden = changedRole.hidden != user.isHidden()
             }
             const issuer = this.users[info.by]
+            if (!issuer) return
 
             this.core.getMessage(info.key, (err, doc) => {
               const issuerName = issuer.name || info.by.slice(0, 8)
