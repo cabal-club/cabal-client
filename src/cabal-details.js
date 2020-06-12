@@ -706,10 +706,6 @@ class CabalDetails extends EventEmitter {
             }
             const issuer = this.users[info.by]
 
-            // don't print message if:
-            // * it is our own action (we already log that locally)
-            // * if the issuer wasn't one of our mods/admins
-            if (issuer.key === this.user.key || (!issuer.isModerator() && !issuer.isAdmin())) return
             this.core.getMessage(info.key, (err, doc) => {
               const issuerName = issuer.name || info.by.slice(0, 8)
               const role = doc.content.flags[0]
