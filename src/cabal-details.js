@@ -238,6 +238,8 @@ class CabalDetails extends EventEmitter {
     this.chname = channel
     this.channel = this.chname
     currentChannel = this.channels[channel]
+    // mark new channel as read
+    if (!keepUnread) currentChannel.markAsRead()
     currentChannel.focus()
     this._emitUpdate('channel-focus', { channel })
   }
