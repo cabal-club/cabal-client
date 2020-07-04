@@ -328,8 +328,8 @@ module.exports = {
   actions: {
     help: () => 'print out a historic log of the moderation actions applied by you, and your active moderators & admins',
     call: (cabal, res, arg) => {
-	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
-	  // get all moderation actions issued by our current mods & admins
+    const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
+    // get all moderation actions issued by our current mods & admins
       const messages = []
       function processMessages (messages) {
         res.info('moderation actions')
@@ -341,7 +341,7 @@ module.exports = {
           res.info(message.text)
         })
       }
-	  Promise.all(promises).then(results => {
+    Promise.all(promises).then(results => {
         const keys = results[0].concat(results[1])
         listNextKey()
         function listNextKey () {
@@ -350,7 +350,7 @@ module.exports = {
             return res.end()
           }
           var key = keys.shift()
-		  const write = (row, enc, next) => {
+      const write = (row, enc, next) => {
             if (!row) return
             const name = cabal.users[key] ? cabal.users[key].name : key.slice(0, 8)
             const target = cabal.users[row.content.id] ? cabal.users[row.content.id].name : row.content.id.slice(0, 8)
@@ -362,18 +362,18 @@ module.exports = {
             if (['admin', 'mod'].includes(role)) { action = (type === 'add' ? 'added' : 'removed') }
             if (role === 'hide') { action = (type === 'add' ? 'hid' : 'unhid') }
             if (role === 'hide') {
-			  text = `${datestr} ${name} ${action} ${target} ${reason}`
+        text = `${datestr} ${name} ${action} ${target} ${reason}`
             } else {
-			  text = `${datestr} ${name} ${action} ${target} as ${role} ${reason}`
+        text = `${datestr} ${name} ${action} ${target} as ${role} ${reason}`
             }
             messages.push({ text, timestamp: parseFloat(row.timestamp) })
             next()
-		  }
-		  const end = (next) => {
+      }
+      const end = (next) => {
             listNextKey()
             next()
           }
-		  pump(cabal.core.moderation.listModerationBy(key), to.obj(write, end))
+      pump(cabal.core.moderation.listModerationBy(key), to.obj(write, end))
         }
       })
     }
@@ -381,13 +381,13 @@ module.exports = {
   roles: {
     help: () => 'list all your current moderators and admins',
     call: (cabal, res, arg) => {
-	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
-	  Promise.all(promises).then(results => {
+    const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
+    Promise.all(promises).then(results => {
         const keys = results[0].concat(results[1])
         const print = (type) => {
-		  return (k) => {
+      return (k) => {
             res.info(`${cabal.users[k] ? cabal.users[k].name : k.slice(0, 8)}: ${type}`)
-		  }
+      }
         }
         res.info('moderation roles')
         if (keys.length === 1 && keys[0] === cabal.getLocalUser().key) {
@@ -400,7 +400,7 @@ module.exports = {
         results[0].map(printAdmins)
         results[1].map(printMods)
         res.end()
-	  })
+    })
     }
   },
   inspect: {
@@ -588,7 +588,7 @@ function flagCmd (cmd, cabal, res, arg) {
   var reason = args.slice(1).join(' ')
   const reasonstr = reason ? '(reason: ' + reason + ')' : ''
   cabal.moderation.setFlag(flag, type, channel, id, reason).then(() => {
-	  if (['admin', 'mod'].includes(flag)) {
+    if (['admin', 'mod'].includes(flag)) {
       if (/^un/.test(cmd) && flag === 'mod' && !cabal.users[id].isModerator()) {
         res.error(`${getPeerName(cabal, id)} is not a mod`)
       } else if (/^un/.test(cmd) && flag === 'admin' && !cabal.users[id].isAdmin()) {
@@ -598,7 +598,7 @@ function flagCmd (cmd, cabal, res, arg) {
       } else if (!/^un/.test(cmd) && flag === 'admin' && cabal.users[id].isAdmin()) {
         res.error(`${getPeerName(cabal, id)} is already an admin`)
       }
-	  } else {
+    } else {
       if (/^un/.test(cmd)) {
         if (!cabal.users[id].isHidden()) {
           res.error(`cannot unhide ${getPeerName(cabal, id)}: they are not hidden`)
@@ -608,7 +608,7 @@ function flagCmd (cmd, cabal, res, arg) {
           res.error(`${getPeerName(cabal, id)} is already hidden`)
         }
       }
-	  }
+    }
     res.end()
   }).catch((err) => { res.error(err) })
 }

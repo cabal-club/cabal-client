@@ -688,8 +688,8 @@ class CabalDetails extends EventEmitter {
       this.users = new Map()
       Object.keys(users).forEach(key => {
         this.users[key] = new User(users[key])
-	  })
-	  this._initializeLocalUser(() => {
+      })
+      this._initializeLocalUser(() => {
         loadModerationState(() => {
           this.registerListener(cabal.moderation.events, 'update', (info) => {
             let user = this.users[info.id]
