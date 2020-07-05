@@ -191,7 +191,17 @@ class Client {
             aliases: this.aliases
           }, done)
           this.cabals.set(cabal, details)
-          if (!opts.noSwarm) cabal.swarm()
+          if (!opts.noSwarm) cabal.swarm({
+            verify: function (remotePubKey, cb) {
+              cabal.moderation.getFlags({
+                id: remotePubKey.toString('hex'),
+                channel: '@'
+              }, function (err, flags) {
+                if (err) cb(err)
+                else cb(null, !flags.includes('block'))
+              })
+            }
+          })
           function done () {
             details._emitUpdate('init')
             cb()

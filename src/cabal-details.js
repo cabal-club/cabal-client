@@ -719,6 +719,10 @@ class CabalDetails extends EventEmitter {
               const changeOccurred = Object.keys(changedRole).filter(r => changedRole[r]).length > 0
               if (!changeOccurred) {
                 this._emitUpdate('user-updated', { key: info.id, user })
+                if ((user.flags.get('@') || []).includes('block')) {
+                  // drop the connection to blocked users immediately
+                  this.core.removeConnection(info.id)
+                }
                 return
               }
               const type = doc.type.replace(/^flags\//, '')
