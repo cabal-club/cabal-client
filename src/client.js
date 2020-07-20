@@ -435,7 +435,8 @@ class Client {
     if (opts.amount) pageOpts.limit = parseInt(opts.amount)
     if (!opts.channel) { opts.channel = details.getCurrentChannel() }
 
-    const prom = details.getChannel(opts.channel).getPage(pageOpts)
+    const channel = details.getChannel(opts.channel)
+    const prom = (!channel) ? Promise.resolve([]) : channel.getPage(pageOpts)
     if (!cb) { return prom }
     prom.then(cb)
   }
