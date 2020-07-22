@@ -113,6 +113,7 @@ class CabalDetails extends EventEmitter {
    * @param {function} [cb] callback called when the input is processed
    */
   processLine (line, cb) {
+    if (!cb) { cb = noop }
     var m = /^\/(\w+)(?:\s+(.*))?/.exec(line.trimRight())
     if (m && this._commands[m[1]] && typeof this._commands[m[1]].call === 'function') {
       this._commands[m[1]].call(this, this._res, m[2])
@@ -188,6 +189,7 @@ class CabalDetails extends EventEmitter {
    * @param {function} [cb] will be called after the nick is published
    */
   publishNick (nick, cb) {
+    if (!cb) { cb = noop }
     this.core.publishNick(nick, (err) => {
       if (err) return cb(err)
       this.user.name = nick
@@ -203,6 +205,7 @@ class CabalDetails extends EventEmitter {
    * @param {function} cb will be called when publishing has finished.
    */
   publishChannelTopic (channel = this.chname, topic, cb) {
+    if (!cb) { cb = noop }
     this.core.publishChannelTopic(channel, topic, cb)
   }
 
@@ -357,13 +360,13 @@ class CabalDetails extends EventEmitter {
    * @param {string} channel
    */
   leaveChannel (channel, cb) {
+    if (!cb) { cb = noop }
     if (typeof channel === 'function') {
       cb = channel
       channel = this.chname
     } else if (!channel) {
       channel = this.chname
     }
-    if (!cb) cb = noop
     if (channel === '!status') {
       return nextTick(cb, new Error('cannot leave the !status channel'))
     }
@@ -564,7 +567,7 @@ class CabalDetails extends EventEmitter {
    * Destroy all of the listeners associated with this `details` instance
    */
   _destroy (cb) {
-    cb = cb || noop
+    if (!cb) cb = noop
     this.listeners.forEach((obj) => { obj.source.removeListener(obj.event, obj.listener) })
     this.core.close(() => {
       this.core.db.close(cb)
@@ -572,6 +575,7 @@ class CabalDetails extends EventEmitter {
   }
 
   _initializeLocalUser (cb) {
+    if (!cb) cb = noop
     this.core.getLocalKey((err, lkey) => {
       if (err) return cb(err)
       this.user = new User()
