@@ -692,8 +692,8 @@ class CabalDetails extends EventEmitter {
       this.users = new Map()
       Object.keys(users).forEach(key => {
         this.users[key] = new User(users[key])
-	  })
-	  this._initializeLocalUser(() => {
+      })
+      this._initializeLocalUser(() => {
         loadModerationState(() => {
           this.registerListener(cabal.moderation.events, 'update', (info) => {
             let user = this.users[info.id]
@@ -723,6 +723,10 @@ class CabalDetails extends EventEmitter {
               const changeOccurred = Object.keys(changedRole).filter(r => changedRole[r]).length > 0
               if (!changeOccurred) {
                 this._emitUpdate('user-updated', { key: info.id, user })
+                if ((user.flags.get('@') || []).includes('block')) {
+                  // drop the connection to blocked users immediately
+                  this.core.removeConnection(info.id)
+                }
                 return
               }
               const type = doc.type.replace(/^flags\//, '')

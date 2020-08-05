@@ -2,6 +2,7 @@ const qr = require('qrcode')
 const pump = require('pump')
 const to = require('to2')
 const strftime = require('strftime')
+const uniq = require('uniq')
 
 module.exports = {
   add: {
@@ -328,8 +329,8 @@ module.exports = {
   actions: {
     help: () => 'print out a historic log of the moderation actions applied by you, and your active moderators & admins',
     call: (cabal, res, arg) => {
-	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
-	  // get all moderation actions issued by our current mods & admins
+      const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
+      // get all moderation actions issued by our current mods & admins
       const messages = []
       function processMessages (messages) {
         res.info('moderation actions')
@@ -341,7 +342,7 @@ module.exports = {
           res.info(message.text)
         })
       }
-	  Promise.all(promises).then(results => {
+      Promise.all(promises).then(results => {
         const keys = results[0].concat(results[1])
         listNextKey()
         function listNextKey () {
@@ -350,30 +351,30 @@ module.exports = {
             return res.end()
           }
           var key = keys.shift()
-		  const write = (row, enc, next) => {
+          const write = (row, enc, next) => {
             if (!row) return
             const name = cabal.users[key] ? cabal.users[key].name : key.slice(0, 8)
             const target = cabal.users[row.content.id] ? cabal.users[row.content.id].name : row.content.id.slice(0, 8)
             const type = row.type.split('/')[1]
             const reason = row.content.reason
-            const role = row.content.flags[0]
-            const datestr = strftime('[%F %T] ', new Date(row.timestamp))
-            let text, action
-            if (['admin', 'mod'].includes(role)) { action = (type === 'add' ? 'added' : 'removed') }
-            if (role === 'hide') { action = (type === 'add' ? 'hid' : 'unhid') }
-            if (role === 'hide') {
-			  text = `${datestr} ${name} ${action} ${target} ${reason}`
-            } else {
-			  text = `${datestr} ${name} ${action} ${target} as ${role} ${reason}`
-            }
+            const flags = row.content.flags
+            const datestr = strftime('[%F %T]', new Date(row.timestamp))
+            const action = {
+              add: 'added',
+              remove: 'removed',
+              set: 'set'
+            }[type]
+            text = `${datestr} ${name} ${
+              formatAction({ type, flags, id: target, cabal})
+            } ${reason ? ': ' + reason : ''}`
             messages.push({ text, timestamp: parseFloat(row.timestamp) })
             next()
-		  }
-		  const end = (next) => {
+          }
+          const end = (next) => {
             listNextKey()
             next()
           }
-		  pump(cabal.core.moderation.listModerationBy(key), to.obj(write, end))
+          pump(cabal.core.moderation.listModerationBy(key), to.obj(write, end))
         }
       })
     }
@@ -381,13 +382,13 @@ module.exports = {
   roles: {
     help: () => 'list all your current moderators and admins',
     call: (cabal, res, arg) => {
-	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
-	  Promise.all(promises).then(results => {
+    const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
+    Promise.all(promises).then(results => {
         const keys = results[0].concat(results[1])
         const print = (type) => {
-		  return (k) => {
+          return (k) => {
             res.info(`${cabal.users[k] ? cabal.users[k].name : k.slice(0, 8)}: ${type}`)
-		  }
+          }
         }
         res.info('moderation roles')
         if (keys.length === 1 && keys[0] === cabal.getLocalUser().key) {
@@ -400,7 +401,7 @@ module.exports = {
         results[0].map(printAdmins)
         results[1].map(printMods)
         res.end()
-	  })
+    })
     }
   },
   inspect: {
@@ -586,31 +587,34 @@ function flagCmd (cmd, cabal, res, arg) {
   var type = /^un/.test(cmd) ? 'remove' : 'add'
   var flag = cmd.replace(/^un/, '')
   var reason = args.slice(1).join(' ')
-  const reasonstr = reason ? '(reason: ' + reason + ')' : ''
-  cabal.moderation.setFlag(flag, type, channel, id, reason).then(() => {
-	  if (['admin', 'mod'].includes(flag)) {
-      if (/^un/.test(cmd) && flag === 'mod' && !cabal.users[id].isModerator()) {
-        res.error(`${getPeerName(cabal, id)} is not a mod`)
-      } else if (/^un/.test(cmd) && flag === 'admin' && !cabal.users[id].isAdmin()) {
-        res.error(`${getPeerName(cabal, id)} is not an admin`)
-      } else if (!/^un/.test(cmd) && flag === 'mod' && cabal.users[id].isModerator()) {
-        res.error(`${getPeerName(cabal, id)} is already a mod`)
-      } else if (!/^un/.test(cmd) && flag === 'admin' && cabal.users[id].isAdmin()) {
-        res.error(`${getPeerName(cabal, id)} is already an admin`)
+  cabal.core.moderation.getFlags({ id, channel }, function (err, flags) {
+    if (err) return res.error(err)
+    if (type === 'remove' && !flags.includes(flag)) {
+      res.error(`user ${getPeerName(cabal, id)} does not have the flag: ${flag}`)
+    } else if (type === 'add' && flags.includes(flag)) {
+      res.error(`user ${getPeerName(cabal, id)} already has the flag: ${flag}`)
+    } else {
+      if (type === 'add') {
+        flags.push(flag)
+        uniq(flags)
+      } else if (type === 'remove') {
+        uniq(flags)
+        var i = flags.indexOf(flag)
+        if (i >= 0) flags.splice(i, 1)
       }
-	  } else {
-      if (/^un/.test(cmd)) {
-        if (!cabal.users[id].isHidden()) {
-          res.error(`cannot unhide ${getPeerName(cabal, id)}: they are not hidden`)
-        }
-      } else {
-        if (cabal.users[id].isHidden()) {
-          res.error(`${getPeerName(cabal, id)} is already hidden`)
-        }
-      }
-	  }
-    res.end()
-  }).catch((err) => { res.error(err) })
+      var fname = { add: 'addFlags', remove: 'removeFlags' }[type]
+      cabal.core.moderation[fname]({
+        id,
+        channel,
+        flags: [flag],
+        reason
+      }, function (err) {
+        if (err) return res.error(err)
+        //res.info(formatAction({ type, flags: [flag], id, cabal }))
+        res.end()
+      })
+    }
+  })
 }
 
 function listCmd (cmd, cabal, res, arg) {
@@ -644,4 +648,34 @@ function listCmd (cmd, cabal, res, arg) {
 
 function ucfirst (s) {
   return s.replace(/^[a-z]/, function (c) { return c.toUpperCase() })
+}
+
+function formatAction ({ cabal, type, flags, id }) {
+  var verb = {
+    add: 'added',
+    remove: 'removed',
+    set: 'set'
+  }[type]
+  if (type === 'set') {
+    return `${verb} flags [${flags}] for user ${getPeerName(cabal, id)}`
+  } else if (type === 'add' && flags.length === 1 && flags[0] === 'hide') {
+    return `hid user ${getPeerName(cabal, id)}`
+  } else if (type === 'remove' && flags.length === 1 && flags[0] === 'hide') {
+    return `unhid user ${getPeerName(cabal, id)}`
+  } else if (type === 'add' && flags.length === 1 && flags[0] === 'block') {
+    return `blocked user ${getPeerName(cabal, id)}`
+  } else if (type === 'remove' && flags.length === 1 && flags[0] === 'block') {
+    return `unblocked user ${getPeerName(cabal, id)}`
+  } else if (type === 'add' && flags.length === 1 && flags[0] === 'admin') {
+    return `added user ${getPeerName(cabal, id)} as admin`
+  } else if (type === 'remove' && flags.length === 1 && flags[0] === 'admin') {
+    return `removed user ${getPeerName(cabal, id)} as admin`
+  } else if (type === 'add' && flags.length === 1 && flags[0] === 'mod') {
+    return `added user ${getPeerName(cabal, id)} as mod`
+  } else if (type === 'remove' && flags.length === 1 && flags[0] === 'mod') {
+    return `removed user ${getPeerName(cabal, id)} as mod`
+  } else {
+    var flag = flags.length === 1 ? 'flag ' + flags[0] : 'flags ['+flags+']'
+    return `${verb} ${flag} for user ${getPeerName(cabal, id)}`
+  }
 }
