@@ -167,7 +167,6 @@ class Client {
     if (typeof key === 'string') {
       key = key.trim()
       cabalPromise = this.resolveName(key).then((resolvedKey) => {
-          console.log("resolved key", resolvedKey)
         if (resolvedKey === null) {
           dnsFailed = true
           return
