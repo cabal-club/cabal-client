@@ -10,6 +10,7 @@ const path = require('path')
 const mkdirp = require('mkdirp')
 const os = require('os')
 const defaultCommands = require('./commands')
+const paperslip = require("paperslip")
 
 class Client {
   /**
@@ -104,17 +105,34 @@ class Client {
   /**
    * Resolve the DNS shortname `name`. If `name` is already a cabal key,  it will
    * be returned and the DNS lookup is aborted.
+   * If `name` is a whisper:// key, a DHT lookup for the passed-in key will occur. 
+   * Once a match is found, it is assumed to be a cabal key, which is returned.
    * Returns the cabal key in `cb`. If `cb` is null a Promise is returned.
-   * @param {string} name the DNS shortname
-   * @param {function(string)} [cb] The callback to be called when DNS lookup succeeds
+   * @param {string} name the DNS shortname, or whisper:// shortname
+   * @param {function(string)} [cb] The callback to be called when lookup succeeds
    */
   resolveName (name, cb) {
-    return this.cabalDns.resolveName(name).then((key) => {
-      if (key === null) return null
-      key = Client.scrubKey(key)
-      if (!cb) return key
-      else cb(key)
-    })
+    if (name.startsWith("whisper://")) {
+        return new Promise((resolve, reject) => {
+            let slip = ""
+            const stream = paperslip.read(name.slice(10))
+            stream.on("data", (datum) => {
+                if (datum) {
+                    slip += datum.toString()
+                }
+            })
+            stream.on("end", () => {
+                resolve(slip)
+            })
+        })
+    } else {
+        return this.cabalDns.resolveName(name).then((key) => {
+          if (key === null) return null
+          key = Client.scrubKey(key)
+          if (!cb) return key
+          else cb(key)
+        })
+      }
   }
 
   /**
@@ -149,6 +167,7 @@ class Client {
     if (typeof key === 'string') {
       key = key.trim()
       cabalPromise = this.resolveName(key).then((resolvedKey) => {
+          console.log("resolved key", resolvedKey)
         if (resolvedKey === null) {
           dnsFailed = true
           return
