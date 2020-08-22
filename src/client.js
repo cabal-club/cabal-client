@@ -112,18 +112,18 @@ class Client {
    * @param {function(string)} [cb] The callback to be called when lookup succeeds
    */
   resolveName (name, cb) {
-    if (name.startsWith("whisper://")) {
+    if (name.startsWith('whisper://') || 
+        // whisperlink heuristic: ends with -<hexhexhex>
+        name.slice(-4).toLowerCase().match(/-[0-9a-f]{3}/)) { 
         return new Promise((resolve, reject) => {
-            let slip = ""
-            const stream = paperslip.read(name.slice(10))
-            stream.on("data", (datum) => {
-                if (datum) {
-                    slip += datum.toString()
-                }
+            let key = ''
+            const topic = name.startsWith('whisper://') ? name.slice(10) : name
+            const stream = paperslip.read(topic)
+            stream.on('data', (data) => {
+              if (data) { key += data.toString() }
             })
-            stream.on("end", () => {
-                resolve(slip)
-            })
+            stream.on('end', () => { resolve(key) })
+            stream.once('error', (err) => { reject(err) })
         })
     } else {
         return this.cabalDns.resolveName(name).then((key) => {
