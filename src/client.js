@@ -10,6 +10,7 @@ const path = require('path')
 const mkdirp = require('mkdirp')
 const os = require('os')
 const defaultCommands = require('./commands')
+const paperslip = require("paperslip")
 
 class Client {
   /**
@@ -104,17 +105,34 @@ class Client {
   /**
    * Resolve the DNS shortname `name`. If `name` is already a cabal key,  it will
    * be returned and the DNS lookup is aborted.
+   * If `name` is a whisper:// key, a DHT lookup for the passed-in key will occur. 
+   * Once a match is found, it is assumed to be a cabal key, which is returned.
    * Returns the cabal key in `cb`. If `cb` is null a Promise is returned.
-   * @param {string} name the DNS shortname
-   * @param {function(string)} [cb] The callback to be called when DNS lookup succeeds
+   * @param {string} name the DNS shortname, or whisper:// shortname
+   * @param {function(string)} [cb] The callback to be called when lookup succeeds
    */
   resolveName (name, cb) {
-    return this.cabalDns.resolveName(name).then((key) => {
-      if (key === null) return null
-      key = Client.scrubKey(key)
-      if (!cb) return key
-      else cb(key)
-    })
+    if (name.startsWith('whisper://') || 
+        // whisperlink heuristic: ends with -<hexhexhex>
+        name.slice(-4).toLowerCase().match(/-[0-9a-f]{3}/)) { 
+        return new Promise((resolve, reject) => {
+            let key = ''
+            const topic = name.startsWith('whisper://') ? name.slice(10) : name
+            const stream = paperslip.read(topic)
+            stream.on('data', (data) => {
+              if (data) { key += data.toString() }
+            })
+            stream.on('end', () => { resolve(key) })
+            stream.once('error', (err) => { reject(err) })
+        })
+    } else {
+        return this.cabalDns.resolveName(name).then((key) => {
+          if (key === null) return null
+          key = Client.scrubKey(key)
+          if (!cb) return key
+          else cb(key)
+        })
+      }
   }
 
   /**
