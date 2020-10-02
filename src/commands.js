@@ -7,6 +7,7 @@ const paperslip = require("paperslip")
 module.exports = {
   add: {
     help: () => 'add a cabal',
+    category: ["misc"],
     alias: ['cabal'],
     call: (cabal, res, arg) => {
       if (arg === '') {
@@ -22,6 +23,7 @@ module.exports = {
   },
   whisper: {
     help: () => 'create a whisper link, a shortlived shortname alias for this cabal\'s key',
+    category: ["sharing"],
     call: (cabal, res, arg) => {
         if (arg === '') {
             return res.error("you need to provide a shortname, e.g. 'workshop'")
@@ -39,6 +41,7 @@ module.exports = {
   },
   new: {
     help: () => 'create a new cabal',
+    category: ["misc"],
     call: (cabal, res, arg) => {
       cabal.client.createCabal((err) => {
         if (err) res.error(err)
@@ -48,6 +51,7 @@ module.exports = {
   },
   nick: {
     help: () => 'change your display name',
+    category: ["basics"],
     alias: ['n'],
     call: (cabal, res, arg) => {
       if (arg === '') {
@@ -63,6 +67,7 @@ module.exports = {
   },
   share: {
     help: () => 'print a cabal key with you as admin. useful for sending to friends',
+    category: ["sharing"],
     call: (cabal, res, arg) => {
       const adminkey = `cabal://${cabal.key}?admin=${cabal.user.key}`
       res.info(adminkey, { data: { adminkey } })
@@ -71,6 +76,7 @@ module.exports = {
   },
   ids: {
     help: () => 'toggle showing ids at the end of nicks. useful for moderation',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       cabal.showIds = !cabal.showIds
       res.info(`toggled identifiers ${cabal.showIds ? 'on' : 'off'}`)
@@ -79,6 +85,7 @@ module.exports = {
   },
   emote: {
     help: () => 'write an old-school text emote',
+    category: ["basics"],
     alias: ['me'],
     call: (cabal, res, arg) => {
       cabal.publishMessage({
@@ -94,7 +101,8 @@ module.exports = {
     }
   },
   say: {
-    help: () => 'write a message to the current channel',
+    help: () => 'write a message to the current channel, useful for escaping a typed /<command>',
+    category: ["misc"],
     call: (cabal, res, arg) => {
       cabal.publishMessage({
         type: 'chat/text',
@@ -109,7 +117,8 @@ module.exports = {
     }
   },
   names: {
-    help: () => 'display the names of the currently online peers',
+    help: () => 'display the names and unique ids of the cabal\'s peers',
+    category: ["basics"],
     call: (cabal, res, arg) => {
       var users = cabal.getUsers()
       var userkeys = Object.keys(users).map((key) => users[key]).sort(cmpUser)
@@ -124,6 +133,7 @@ module.exports = {
   },
   channels: {
     help: () => "display the cabal's channels",
+    category: ["basics", "channels"],
     call: (cabal, res, arg) => {
       var joinedChannels = cabal.getJoinedChannels()
       var channels = cabal.getChannels()
@@ -146,6 +156,7 @@ module.exports = {
   },
   join: {
     help: () => 'join a new channel',
+    category: ["basics", "channels"],
     alias: ['j'],
     call: (cabal, res, arg) => {
       arg = (arg.trim() || '').replace(/^#/, '')
@@ -159,6 +170,7 @@ module.exports = {
   },
   leave: {
     help: () => 'leave a channel',
+    category: ["basics", "channels"],
     alias: ['l', 'part'],
     call: (cabal, res, arg) => {
       arg = (arg || '').trim().replace(/^#/, '')
@@ -172,24 +184,27 @@ module.exports = {
   },
   clear: {
     help: () => 'clear the current backscroll',
+    category: ["basics", "misc"],
     call: (cabal, res, arg) => {
       cabal.client.clearStatusMessages()
       res.end()
     }
   },
-  qr: {
-    help: () => "generate a qr code with the current cabal's address",
-    call: (cabal, res, arg) => {
-      const cabalKey = `cabal://${cabal.key}`
-      qr.toString(cabalKey, { type: 'terminal' }, (err, qrcode) => {
-        if (err) return
-        res.info(`QR code for ${cabalKey}\n\n${qrcode}`)
-        res.end()
-      })
-    }
-  },
+  // qr: { // commented out as it doesn't work as of 2010-10-02 / after moz sprint
+  //   help: () => "generate a qr code with the current cabal's address",
+  //   category: ["sharing"],
+  //   call: (cabal, res, arg) => {
+  //     const cabalKey = `cabal://${cabal.key}`
+  //     qr.toString(cabalKey, { type: 'terminal' }, (err, qrcode) => {
+  //       if (err) return
+  //       res.info(`QR code for ${cabalKey}\n\n${qrcode}`)
+  //       res.end()
+  //     })
+  //   }
+  // },
   topic: {
     help: () => 'set the topic/description/`message of the day` for a channel',
+    category: ["channels", "basics"],
     alias: ['motd'],
     call: (cabal, res, arg) => {
       cabal.publishChannelTopic(cabal.channel, arg, (err) => {
@@ -200,6 +215,7 @@ module.exports = {
   },
   whoami: {
     help: () => 'display your local user key',
+    category: ["basics", "misc"],
     alias: ['key'],
     call: (cabal, res, arg) => {
       res.info('Local user key: ' + cabal.getLocalUser().key)
@@ -208,6 +224,7 @@ module.exports = {
   },
   whois: {
     help: () => 'display the public keys associated with the passed in nick',
+    category: ["moderation", "misc"],
     call: (cabal, res, arg) => {
       if (!arg) {
         res.info('usage: /whois <nick>')
@@ -226,10 +243,11 @@ module.exports = {
   },
   read: {
     help: () => 'show raw information about a message from a KEY@SEQ',
+    category: ["misc"],
     call: (cabal, res, arg) => {
       var args = (arg || '').split(/\s+/)
       if (args[0].length === 0) {
-        res.info('usage: /baninfo KEY@SEQ')
+        res.info('usage: /read KEY@SEQ')
         return res.end()
       }
       cabal.core.getMessage(args[0], function (err, doc) {
@@ -242,7 +260,8 @@ module.exports = {
     }
   },
   moderation: {
-    help: () => 'display moderation help and commands',
+    help: () => 'display additional information on moderation commands',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       const baseCmds = ['hide', 'mod', 'admin']
       const extraCmds = ['ids', 'actions', 'roles', 'inspect']
@@ -272,79 +291,92 @@ module.exports = {
     }
   },
   hide: {
-    help: () => 'hide a user from a channel or the whole cabal',
+    help: () => 'hide a user\'s message across the whole cabal',
+    category: ["moderation", "basics"],
     call: (cabal, res, arg) => {
       flagCmd('hide', cabal, res, arg)
     }
   },
   unhide: {
-    help: () => 'unhide a user from a channel or the whole cabal',
+    help: () => 'unhide a user across the entire cabal',
+    category: ["moderation", "basics"],
     call: (cabal, res, arg) => {
       flagCmd('unhide', cabal, res, arg)
     }
   },
   hides: {
     help: () => 'list hides',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       listCmd('hide', cabal, res, arg)
     }
   },
   block: {
     help: () => 'block a user',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       flagCmd('block', cabal, res, arg)
     }
   },
   unblock: {
     help: () => 'unblock a user',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       flagCmd('unblock', cabal, res, arg)
     }
   },
   blocks: {
     help: () => 'list blocks',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       listCmd('block', cabal, res, arg)
     }
   },
   mod: {
     help: () => 'add a user as a moderator',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       flagCmd('mod', cabal, res, arg)
     }
   },
   unmod: {
     help: () => 'remove a user as a moderator',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       flagCmd('unmod', cabal, res, arg)
     }
   },
   mods: {
     help: () => 'list mods',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       listCmd('mod', cabal, res, arg)
     }
   },
   admin: {
     help: () => 'add a user as an admin',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       flagCmd('admin', cabal, res, arg)
     }
   },
   unadmin: {
     help: () => 'remove a user as an admin',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       flagCmd('unadmin', cabal, res, arg)
     }
   },
   admins: {
     help: () => 'list admins',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       listCmd('admin', cabal, res, arg)
     }
   },
   actions: {
     help: () => 'print out a historic log of the moderation actions applied by you, and your active moderators & admins',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
 	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
 	  // get all moderation actions issued by our current mods & admins
@@ -398,6 +430,7 @@ module.exports = {
   },
   roles: {
     help: () => 'list all your current moderators and admins',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
 	  const promises = [cabal.moderation.getAdmins(), cabal.moderation.getMods()]
 	  Promise.all(promises).then(results => {
@@ -423,6 +456,7 @@ module.exports = {
   },
   inspect: {
     help: () => 'view moderation actions published by a user',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       var args = arg ? arg.split(/\s+/) : []
       if (args.length === 0) {
@@ -460,6 +494,7 @@ module.exports = {
   },
   flag: {
     help: () => 'update and read flags set for a given account',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       var args = arg ? arg.split(/\s+/) : []
       if (args.length === 0) {
@@ -508,6 +543,7 @@ module.exports = {
   },
   flags: {
     help: () => 'list flags set for accounts',
+    category: ["moderation"],
     call: (cabal, res, arg) => {
       var args = arg ? arg.split(/\s+/) : []
       cabal.core.moderation.list((err, list) => {
