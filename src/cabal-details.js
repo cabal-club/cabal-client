@@ -641,7 +641,6 @@ class CabalDetails extends EventEmitter {
           }
           this.channels[channel].joined = true
         }
-      // this._emitUpdate() -- TODO: commented this generic event out, if things break then reinstate it. otherwise remove before merge
       })
     })
 
