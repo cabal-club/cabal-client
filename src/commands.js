@@ -130,7 +130,7 @@ module.exports = {
       res.info(`there are currently ${channels.length} channels `)
       channels.map((c) => {
         var topic = cabal.getTopic(c)
-        var shortTopic = topic.length > 20 ? topic.slice(0, 40) + '..' : topic || ''
+        var shortTopic = topic.length > 40 ? topic.slice(0, 40) + '..' : topic || ''
         var count = cabal.getChannelMembers(c).length
         var userPart = count ? `: ${count} ${count === 1 ? 'person' : 'people'}` : ''
         res.info({
