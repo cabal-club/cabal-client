@@ -114,7 +114,7 @@ class CabalDetails extends EventEmitter {
    */
   processLine (line, cb) {
     if (!cb) { cb = noop }
-    var m = /^\/(\w+)(?:\s+(.*))?/.exec(line.trimRight())
+    var m = /^\/\s*(\w+)(?:\s+(.*))?/.exec(line.trimRight())
     if (m && this._commands[m[1]] && typeof this._commands[m[1]].call === 'function') {
       this._commands[m[1]].call(this, this._res, m[2])
       this._emitUpdate('command', { command: m[1], arg: m[2] || '' })
