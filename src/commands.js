@@ -116,6 +116,38 @@ module.exports = {
       })
     }
   },
+  search: {
+    help: () => 'search the backlog for messages; /search <term> (--ch <channel name>)',
+    category: ["misc"],
+    call: (cabal, res, arg) => {
+      if (arg.length === 0) return
+      const opts = {}
+      if (arg.indexOf("--ch") >= 0) {
+        let [term, channel] = arg.split("--ch")
+        term = term.trim()
+        channel = channel.trim()
+        if (!cabal.channels[channel]) {
+          res.error(`channel ${channel} does not exist`)
+          res.error(`/search <term> (--ch <channel>)`)
+          return 
+        }
+        opts.channel = channel.trim()
+        arg = term
+      }
+      cabal.client.searchMessages(arg, opts).then((matches) => {
+        const users = cabal.getUsers()
+        res.info(`${matches.length} matching ${matches.length === 1 ? "log" : "logs"} found`)
+        matches.forEach((envelope) => {
+          let { message } = envelope
+          if (message && message.value && message.value.type === "chat/text") {
+            const user = users[message.key].name || message.key.slice(0, 8)
+            const output = `<${user}> ${message.value.content.text}`
+            res.info(output)
+          }
+        })
+      })
+    }
+  },
   names: {
     help: () => 'display the names and unique ids of the cabal\'s peers',
     category: ["basics"],
