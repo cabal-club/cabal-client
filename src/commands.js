@@ -120,10 +120,15 @@ module.exports = {
     help: () => 'search the backlog for messages; /search <term> (--ch <channel name>)',
     category: ["misc"],
     call: (cabal, res, arg) => {
-      if (arg.length === 0) return
+      if (!arg) { 
+        return res.error(`/search <term> (--ch <channel>)`)
+      }
       const opts = {}
       if (arg.indexOf("--ch") >= 0) {
         let [term, channel] = arg.split("--ch")
+        if (!term || term.length === 0) { 
+            return res.error(`/search <term> (--ch <channel>)`)
+        }
         term = term.trim()
         channel = channel.trim()
         if (!cabal.channels[channel]) {
