@@ -55,7 +55,7 @@
 <a name="new_Client_new"></a>
 
 ### new Client([opts])
-Create a client instance from which to manage multiple 
+Create a client instance from which to manage multiple
 [`cabal-core`](https://github.com/cabal-club/cabal-core/) instances.
 
 **Params**
@@ -75,14 +75,16 @@ Create a client instance from which to manage multiple
 <a name="Client+resolveName"></a>
 
 ### client.resolveName(name, [cb])
-Resolve the DNS shortname `name`. If `name` is already a cabal key,  it will 
+Resolve the DNS shortname `name`. If `name` is already a cabal key,  it will
 be returned and the DNS lookup is aborted.
+If `name` is a whisper:// key, a DHT lookup for the passed-in key will occur. 
+Once a match is found, it is assumed to be a cabal key, which is returned.
 Returns the cabal key in `cb`. If `cb` is null a Promise is returned.
 
 **Params**
 
-- name <code>string</code> - the DNS shortname
-- *cb* <code>function</code> - The callback to be called when DNS lookup succeeds
+- name <code>string</code> - the DNS shortname, or whisper:// shortname
+- *cb* <code>function</code> - The callback to be called when lookup succeeds
 
 
 * * *
@@ -126,7 +128,7 @@ Focus the cabal at `key`, used when you want to switch from one open cabal to an
 <a name="Client+removeCabal"></a>
 
 ### client.removeCabal(key, cb)
-Remove the cabal `key`. Destroys everything related to it 
+Remove the cabal `key`. Destroys everything related to it
 (the data is however still persisted to disk, fret not!).
 
 **Params**
@@ -225,7 +227,7 @@ Returns a `CabalDetails` instance for the passed in `cabal-core` instance.
 <a name="Client+addStatusMessage"></a>
 
 ### client.addStatusMessage(message, channel, [cabal])
-Add a status message, displayed client-side only, to the specified channel and cabal. 
+Add a status message, displayed client-side only, to the specified channel and cabal.
 If no cabal is specified, the currently focused cabal is used.
 
 **Params**
@@ -253,7 +255,7 @@ Clear status messages for the specified channel.
 <a name="Client+getUsers"></a>
 
 ### client.getUsers([cabal]) ⇒ <code>Array.&lt;Object&gt;</code>
-Returns a list of all the users for the specified cabal. 
+Returns a list of all the users for the specified cabal.
 If no cabal is specified, the currently focused cabal is used.
 
 **Returns**: <code>Array.&lt;Object&gt;</code> - the list of users  
@@ -267,7 +269,7 @@ If no cabal is specified, the currently focused cabal is used.
 <a name="Client+getJoinedChannels"></a>
 
 ### client.getJoinedChannels([cabal]) ⇒ <code>Array.&lt;Object&gt;</code>
-Returns a list of channels the user has joined for the specified cabal. 
+Returns a list of channels the user has joined for the specified cabal.
 If no cabal is specified, the currently focused cabal is used.
 
 **Returns**: <code>Array.&lt;Object&gt;</code> - the list of Channels  
@@ -281,7 +283,7 @@ If no cabal is specified, the currently focused cabal is used.
 <a name="Client+getChannels"></a>
 
 ### client.getChannels([cabal]) ⇒ <code>Array.&lt;Object&gt;</code>
-Returns a list of all channels for the specified cabal. 
+Returns a list of all channels for the specified cabal.
 If no cabal is specified, the currently focused cabal is used.
 
 **Returns**: <code>Array.&lt;Object&gt;</code> - the list of Channels  
@@ -455,7 +457,7 @@ Get the current database version.
 <a name="Client.generateKey"></a>
 
 ### Client.generateKey() ⇒ <code>string</code>
-Returns a 64 character hex string i.e. a newly generated cabal key. 
+Returns a 64 character hex string i.e. a newly generated cabal key.
 Useful if you want to programmatically create a new cabal as part of a shell pipeline.
 
 
@@ -562,8 +564,8 @@ channel.
 <a name="CabalDetails+publishMessage"></a>
 
 ### cabalDetails.publishMessage(msg, [opts], [cb])
-Publish a message up to consumer. See 
-[`cabal-core`](https://github.com/cabal-club/cabal-core/) 
+Publish a message up to consumer. See
+[`cabal-core`](https://github.com/cabal-club/cabal-core/)
 for the full list of options.
 
 **Params**
@@ -626,7 +628,7 @@ Publish a new channel topic to `channel`.
 <a name="CabalDetails+getChannelMembers"></a>
 
 ### cabalDetails.getChannelMembers([channel]) ⇒ <code>Array.&lt;object&gt;</code>
-Return the list of users that have joined `channel`. 
+Return the list of users that have joined `channel`.
 Note: this can be a subset of all of the users in a cabal.
 
 **Params**
@@ -652,7 +654,7 @@ Add a status message, visible locally only.
 <a name="CabalDetails+getChannels"></a>
 
 ### cabalDetails.getChannels() ⇒ <code>Array.&lt;string&gt;</code>
-**Returns**: <code>Array.&lt;string&gt;</code> - a list of all the channels in this cabal.  
+**Returns**: <code>Array.&lt;string&gt;</code> - a list of all the channels in this cabal. Does not return channels with 0 members.  
 
 * * *
 
@@ -673,7 +675,7 @@ Add a status message, visible locally only.
 <a name="CabalDetails+clearVirtualMessages"></a>
 
 ### cabalDetails.clearVirtualMessages([channel])
-Remove all of the virtual (i.e. status) messages associated with this channel. 
+Remove all of the virtual (i.e. status) messages associated with this channel.
 Virtual messages are local only.
 
 **Params**
@@ -721,7 +723,7 @@ and publishes a message announcing that you have joined the channel
 <a name="CabalDetails+leaveChannel"></a>
 
 ### cabalDetails.leaveChannel(channel)
-Leave a joined channel. This publishes a message announcing 
+Leave a joined channel. This publishes a message announcing
 that you have left the channel.
 
 **Params**
@@ -734,7 +736,7 @@ that you have left the channel.
 <a name="CabalDetails+getUsers"></a>
 
 ### cabalDetails.getUsers() ⇒ <code>object</code>
-**Returns**: <code>object</code> - all of the users in this cabal. Each key is the public key of its 
+**Returns**: <code>object</code> - all of the users in this cabal. Each key is the public key of its
 corresponding user.  
 
 * * *

@@ -266,7 +266,7 @@ class CabalDetails extends EventEmitter {
   }
 
   /**
-   * @returns {string[]} a list of all the channels in this cabal.
+   * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members.
    */
   getChannels () {
     return Object.keys(this.channels).filter(ch => this.channels[ch].members.size > 0).sort()
