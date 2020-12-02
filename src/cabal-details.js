@@ -269,7 +269,7 @@ class CabalDetails extends EventEmitter {
    * @returns {string[]} a list of all the channels in this cabal.
    */
   getChannels () {
-    return Object.keys(this.channels).sort()
+    return Object.keys(this.channels).filter(ch => this.channels[ch].members.size > 0).sort()
   }
 
   // returns a ChannelDetails object
