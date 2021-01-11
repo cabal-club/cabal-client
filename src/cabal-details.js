@@ -176,6 +176,8 @@ class CabalDetails extends EventEmitter {
     if (!msg.content.channel) {
       msg.content.channel = this.chname
     }
+    // no typing to !status
+    if (msg.content.channel === "!status") return
     if (!msg.type) msg.type = 'chat/text'
     this.core.publish(msg, opts, (err, m) => {
       this._emitUpdate('publish-message', { message: msg })
