@@ -271,11 +271,35 @@ module.exports = {
       }
       const users = cabal.getUsers()
       const whoisKeys = Object.keys(users).filter((k) => users[k].name && users[k].name === arg)
+      if (whoisKeys.length === 0) {
+          res.info(`there's currently no one named ${arg}`)
+          res.end()
+          return
+      }
       res.info(`${arg}'s public keys:`)
       // list all of arg's public keys in list
       for (var key of whoisKeys) {
         res.info(`  ${key}`)
       }
+      res.end()
+    }
+  },
+  whoiskey: {
+    help: () => 'display the user associated with the passed in public key',
+    category: ["moderation", "misc"],
+    call: (cabal, res, arg) => {
+      if (!arg) {
+        res.info('usage: /whoiskey <public key>')
+        res.end()
+        return
+      }
+      arg = arg.trim().replace("\"", "")
+      const users = cabal.getUsers()
+      if (typeof users[arg] === "undefined") {
+        res.error("no user associated with key", arg)
+        return
+      }
+      res.info(`${arg} is currently known as: ${users[arg].name || "<unset nickname>"}`)
       res.end()
     }
   },

@@ -20,10 +20,12 @@ test('create a cabal', function (t) {
       t.pass('cabal created ok')
       t.same(cabal.getLocalUser().online, true)
       t.same(cabal.getLocalUser().local, true)
-      client.removeCabal(cabal.key, () => {
-        t.pass('removed cabal ok')
-        rimraf.sync(dir)
-      })
+      new Promise((res, rej) => {
+          client.removeCabal(cabal.key, () => {
+            rimraf.sync(dir)
+            res()
+          })
+      }).then(() => t.pass('removed cabal ok'))
     })
     .catch(err => {
       t.error(err)
@@ -51,22 +53,33 @@ test('check that local user is admin', function (t) {
       const msg = {
         type: 'chat/text',
         content: {
-          text: 'hello'
+          text: 'hello',
+          channel: "default"
         }
       }
 
-      cabal.publishMessage(msg, err => {
-        t.error(err, 'published msg ok')
-        client.removeCabal(key, () => {
+      new Promise((res, rej) => {
+        cabal.publishMessage(msg, (err) => {
+          t.error(err, 'published msg ok')
+          res()
+        })
+      }).then(() => {
+        return new Promise((res, rej) => {
+          client.removeCabal(key, () => {
+            res()
+          })
+        }).then(() => {
           t.pass('removed cabal ok')
           client.addCabal(key, opts)
             .then(cabal => {
               t.pass('re-added cabal ok')
               t.same(cabal.getLocalUser().isAdmin(), true, 'local user is admin')
-              client.removeCabal(key, () => {
-                t.pass()
-                rimraf.sync(dir)
-              })
+              return new Promise((res3, rej) => {
+                client.removeCabal(key, () => {
+                  rimraf.sync(dir)
+                  res3()
+                })
+              }).then(() => t.pass())
             })
             .catch(err => {
               t.error(err)

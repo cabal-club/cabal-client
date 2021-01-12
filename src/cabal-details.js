@@ -176,6 +176,8 @@ class CabalDetails extends EventEmitter {
     if (!msg.content.channel) {
       msg.content.channel = this.chname
     }
+    // no typing to !status
+    if (msg.content.channel === "!status") return cb(new Error("not allowed to post to !status"), null) 
     if (!msg.type) msg.type = 'chat/text'
     this.core.publish(msg, opts, (err, m) => {
       this._emitUpdate('publish-message', { message: msg })
@@ -349,7 +351,7 @@ class CabalDetails extends EventEmitter {
         if (err) return cb(err)
         // we probably always want to open a joined channel?
         this.focusChannel(channel)
-        cb(null)
+        return cb(null)
       })
     } else nextTick(cb, null)
   }

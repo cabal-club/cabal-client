@@ -83,15 +83,19 @@ class Client {
   }
 
   /**
-   * Removes URI scheme and returns the cabal key as a 64 character hex string
+   * Removes URI scheme, URI search params (if present), and returns the cabal key as a 64 character hex string
    * @param {string} key the key to scrub
    * @returns {string} the scrubbed key
    * @example
-   * Client.scrubKey('cabal://12345678...')
+   * Client.scrubKey('cabal://12345678...?admin=7331b4b..')
    * // => '12345678...'
    */
   static scrubKey (key) {
-    return key.replace('cabal://', '').replace('cbl://', '').replace('dat://', '').replace(/\//g, '')
+      // remove url search params; indexOf returns -1 if no params => would chop off the last character if used w/ slice
+      if (key.indexOf("?") >= 0) { 
+          return key.slice(0, key.indexOf("?")).replace('cabal://', '').replace('cbl://', '').replace('dat://', '').replace(/\//g, '')
+      }
+      return key.replace('cabal://', '').replace('cbl://', '').replace('dat://', '').replace(/\//g, '')
   }
 
   /**
@@ -128,7 +132,6 @@ class Client {
     } else {
         return this.cabalDns.resolveName(name).then((key) => {
           if (key === null) return null
-          key = Client.scrubKey(key)
           if (!cb) return key
           else cb(key)
         })
@@ -165,32 +168,33 @@ class Client {
     let cabalPromise
     let dnsFailed = false
     if (typeof key === 'string') {
-      key = key.trim()
-      cabalPromise = this.resolveName(key).then((resolvedKey) => {
+      cabalPromise = this.resolveName(key.trim()).then((resolvedKey) => {
+        // discard uri scheme and search params of cabal key, if present. returns 64 chr hex string
+        const scrubbedKey = Client.scrubKey(resolvedKey)
+        // TODO: export cabal-core's isHypercoreKey() and use here & verify that scrubbedKey is 64 ch hex string
         if (resolvedKey === null) {
           dnsFailed = true
           return
         }
         let { temp, dbdir } = this.config
         dbdir = dbdir || path.join(Client.getCabalDirectory(), 'archives')
-        const storage = temp ? ram : path.join(dbdir, resolvedKey)
-        if (!temp) try { mkdirp.sync(path.join(dbdir, resolvedKey, 'views')) } catch (e) {}
-        var db = temp ? memdb() : level(path.join(dbdir, resolvedKey, 'views'))
+        const storage = temp ? ram : path.join(dbdir, scrubbedKey)
+        if (!temp) try { mkdirp.sync(path.join(dbdir, scrubbedKey, 'views')) } catch (e) {}
+        var db = temp ? memdb() : level(path.join(dbdir, scrubbedKey, 'views'))
 
-        if (!key.startsWith('cabal://')) key = 'cabal://' + key
-        const uri = new URL(key)
+        if (!resolvedKey.startsWith('cabal://')) resolvedKey = 'cabal://' + resolvedKey
+        const uri = new URL(resolvedKey)
         const modKeys = uri.searchParams.getAll('mod')
         const adminKeys = uri.searchParams.getAll('admin')
 
-        var cabal = Cabal(storage, resolvedKey, { modKeys, adminKeys, db: db, maxFeeds: this.maxFeeds })
-        this._keyToCabal[resolvedKey] = cabal
+        var cabal = Cabal(storage, scrubbedKey, { modKeys, adminKeys, db: db, maxFeeds: this.maxFeeds })
+        this._keyToCabal[scrubbedKey] = cabal
         return cabal
       })
-    } else {
+    } else { // a cabal instance was passed in, instead of a cabal key string
       cabalPromise = new Promise((resolve, reject) => {
-        // a cabal instance was passed in
         var cabal = key
-        this._keyToCabal[cabal.key] = cabal
+        this._keyToCabal[Client.scrubKey(cabal.key)] = cabal
         resolve(cabal)
       })
     }
@@ -251,7 +255,7 @@ class Client {
     details._destroy(cb)
 
     // burn everything we know about the cabal
-    delete this._keyToCabal[key]
+    delete this._keyToCabal[Client.scrubKey(key)]
     return this.cabals.delete(cabal)
   }
 
@@ -409,7 +413,7 @@ class Client {
     if (key instanceof Cabal) {
       return key
     }
-    return this._keyToCabal[key]
+    return this._keyToCabal[Client.scrubKey(key)]
   }
 
   /**
