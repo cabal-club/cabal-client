@@ -64,6 +64,7 @@ Create a client instance from which to manage multiple
     - config <code>object</code>
         - temp <code>boolean</code> - if `temp` is true no data is persisted to disk.
         - *dbdir* <code>string</code> - the directory to store the cabal data
+        - *preferredPort* <code>string</code> - the port cabal will listen on for traffic
     - *maxFeeds* <code>number</code> <code> = 1000</code> - max amount of feeds to sync
     - *persistentCache* <code>object</code> - specify a `read` and `write` to create a persistent DNS cache
         - read <code>function</code> - async cache lookup function
@@ -466,7 +467,7 @@ Useful if you want to programmatically create a new cabal as part of a shell pip
 <a name="Client.scrubKey"></a>
 
 ### Client.scrubKey(key) ⇒ <code>string</code>
-Removes URI scheme and returns the cabal key as a 64 character hex string
+Removes URI scheme, URI search params (if present), and returns the cabal key as a 64 character hex string
 
 **Returns**: <code>string</code> - the scrubbed key  
 **Params**
@@ -475,7 +476,7 @@ Removes URI scheme and returns the cabal key as a 64 character hex string
 
 **Example**  
 ```js
-Client.scrubKey('cabal://12345678...')
+Client.scrubKey('cabal://12345678...?admin=7331b4b..')
 // => '12345678...'
 ```
 
