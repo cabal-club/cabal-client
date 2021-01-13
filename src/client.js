@@ -21,6 +21,7 @@ class Client {
    * @param {object} opts.config
    * @param {boolean} opts.config.temp if `temp` is true no data is persisted to disk.
    * @param {string} [opts.config.dbdir] the directory to store the cabal data
+   * @param {string} [opts.config.preferredPort] the port cabal will listen on for traffic
    * @param {number} [opts.maxFeeds=1000] max amount of feeds to sync
    * @param {object} [opts.persistentCache] specify a `read` and `write` to create a persistent DNS cache
    * @param {function} opts.persistentCache.read async cache lookup function
@@ -32,7 +33,8 @@ class Client {
       opts = {
         config: {
           temp: true,
-          dbdir: null
+          dbdir: null,
+          preferredPort: 0  // use cabal-core's default port
         }
       }
     }
@@ -176,7 +178,8 @@ class Client {
           dnsFailed = true
           return
         }
-        let { temp, dbdir } = this.config
+        let { temp, dbdir, preferredPort } = this.config
+        preferredPort = preferredPort || 0 
         dbdir = dbdir || path.join(Client.getCabalDirectory(), 'archives')
         const storage = temp ? ram : path.join(dbdir, scrubbedKey)
         if (!temp) try { mkdirp.sync(path.join(dbdir, scrubbedKey, 'views')) } catch (e) {}
@@ -187,7 +190,7 @@ class Client {
         const modKeys = uri.searchParams.getAll('mod')
         const adminKeys = uri.searchParams.getAll('admin')
 
-        var cabal = Cabal(storage, scrubbedKey, { modKeys, adminKeys, db: db, maxFeeds: this.maxFeeds })
+        var cabal = Cabal(storage, scrubbedKey, { modKeys, adminKeys, db, preferredPort, maxFeeds: this.maxFeeds })
         this._keyToCabal[scrubbedKey] = cabal
         return cabal
       })
