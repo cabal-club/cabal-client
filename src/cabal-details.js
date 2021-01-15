@@ -29,6 +29,7 @@ class CabalDetails extends EventEmitter {
    * @constructor
    * @fires CabalDetails#update
    * @fires CabalDetails#init
+   * @fires CabalDetails#info
    * @fires CabalDetails#user-updated
    * @fires CabalDetails#new-channel
    * @fires CabalDetails#new-message
@@ -550,6 +551,14 @@ class CabalDetails extends EventEmitter {
    *
    * Fires when any kind of change has happened to the cabal.
    * @event CabalDetails#update
+   */
+
+  /**
+   *
+   * Fires when a valid slash-command (/<command>) emits output. See src/commands.js for all commands & their payloads.
+   * @event CabalDetails#info
+   * @type {object}
+   * @property {string} command - The command that triggered the event & has emitted output
    */
 
   _emitUpdate (type, payload = null) {
