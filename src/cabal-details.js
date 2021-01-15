@@ -56,7 +56,7 @@ class CabalDetails extends EventEmitter {
     this._res = function (type) {
       return {
         info: (msg) => {
-          const payload = { ...msg }
+          const payload = (typeof msg === "string") ? { text: msg } : { ...msg }
           payload["command"] = type
           this._emitUpdate('info', payload)
         },
