@@ -121,12 +121,10 @@ class CabalDetails extends EventEmitter {
     var m = /^\/\s*(\w+)(?:\s+(.*))?/.exec(line.trimRight())
     if (m && this._commands[m[1]] && typeof this._commands[m[1]].call === 'function') {
       this._commands[m[1]].call(this, this._res(m[1]), m[2])
-      this._emitUpdate('command', { command: m[1], arg: m[2] || '' })
     } else if (m && this._aliases[m[1]]) {
       var key = this._aliases[m[1]]
       if (this._commands[key]) {
         this._commands[key].call(this, this._res(key), m[2])
-        this._emitUpdate('command', { command: key, arg: m[2] || '' })
       } else {
         this._res("warn").info(`command for alias ${m[1]} => ${key} not found`)
         cb()
