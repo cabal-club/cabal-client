@@ -3,6 +3,7 @@ const pump = require('pump')
 const to = require('to2')
 const strftime = require('strftime')
 const paperslip = require("paperslip")
+const hrinames = require("human-readable-ids").hri // transitive dep via paperslip
 
 module.exports = {
   add: {
@@ -25,17 +26,18 @@ module.exports = {
     help: () => 'create a whisper link, a shortlived shortname alias for this cabal\'s key',
     category: ["sharing"],
     call: (cabal, res, arg) => {
-        if (arg === '') {
-            return res.error("you need to provide a shortname, e.g. 'workshop'")
+        if (typeof arg === "undefined" || arg === '') {
+            arg = hrinames.random()
         }
         const topic = `${arg}-${cabal.key.slice(0,3)}`
-        const whisperlink = `whisper://${topic}`
-        res.info("whispering on " + whisperlink + " for the next 5 minutes")
-        // currently this will logout ip addresses that join via the whisper key
+        const link = `whisper://${topic}`
+        res.info({ text: `whispering on ${link} for the next 5 minutes`, link })
+        // NOTE: currently this will log which ip addresses join via the whisperlink
         const swarm = paperslip.write(topic, `cabal://${cabal.key}`, res.info) 
         setTimeout(() => {
             paperslip.stop(swarm)
-            res.info("stopped whispering " + topic)
+            res.info(`stopped whispering ${link}`)
+            res.end()
         }, 5 * 60 * 1000)
     }
   },
