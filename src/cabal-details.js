@@ -54,10 +54,13 @@ class CabalDetails extends EventEmitter {
     this._commands = commands || {}
     this._aliases = aliases || {}
     this._res = function (type) {
+      let seqno = 0
       return {
-        info: (msg) => {
-          const payload = (typeof msg === "string") ? { text: msg } : { ...msg }
+        info: (msg, obj) => {
+          let payload = (typeof msg === "string") ? { text: msg } : { ...msg }
+          if (typeof obj !== "undefined") payload === { ...payload, ...obj }
           payload["command"] = type
+          payload["seqno"] = seqno++
           this._emitUpdate('info', payload)
         },
         error: (err) => {
