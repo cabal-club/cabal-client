@@ -31,14 +31,16 @@ module.exports = {
         }
         const topic = `${arg}-${cabal.key.slice(0,3)}`
         const link = `whisper://${topic}`
-        res.info({ text: `whispering on ${link} for the next 5 minutes`, link })
+        const minutes = 5
+        const ttl = minutes * 60 * 1000 // time to live (how long the link is active)
+        res.info({ text: `whispering on ${link} for the next ${minutes} minutes`, link, ttl })
         // NOTE: currently this will log which ip addresses join via the whisperlink
         const swarm = paperslip.write(topic, `cabal://${cabal.key}`, res.info) 
         setTimeout(() => {
             paperslip.stop(swarm)
             res.info(`stopped whispering ${link}`)
             res.end()
-        }, 5 * 60 * 1000)
+        }, ttl)
     }
   },
   new: {
