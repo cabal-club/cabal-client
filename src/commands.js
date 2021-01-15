@@ -164,11 +164,11 @@ module.exports = {
       var users = cabal.getUsers()
       var userkeys = Object.keys(users).map((key) => users[key]).sort(cmpUser)
       res.info('history of peers in cabal')
-      userkeys.map((u) => {
+      userkeys.map((u, i) => {
         var username = u.name || 'conspirator'
         var spaces = ' '.repeat(15)
         var paddedName = (username + spaces).slice(0, spaces.length)
-        res.info(`  ${paddedName} ${u.key}`)
+        res.info(`${i+1}.  ${paddedName} ${u.key}`)
       })
     }
   },
