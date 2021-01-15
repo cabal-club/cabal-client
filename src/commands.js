@@ -182,7 +182,6 @@ module.exports = {
         var userPart = count ? `: ${count} ${count === 1 ? 'person' : 'people'}` : ''
         res.info({
           text: `  ${joinedChannels.includes(c) ? '*' : ' '} ${c}${userPart} ${shortTopic}`,
-          command: "channels",
           channel: c,
           userCount: count,
           topic,

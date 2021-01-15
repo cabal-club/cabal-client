@@ -52,16 +52,20 @@ class CabalDetails extends EventEmitter {
     this.client = client
     this._commands = commands || {}
     this._aliases = aliases || {}
-    this._res = {
-      info: (msg) => {
-        this._emitUpdate('info', msg)
-      },
-      error: (err) => {
-        this._emitUpdate('error', err)
-      },
-      end: () => {
-        // does nothing right now but may emit an event to indicate the command
-        // has finished in the future
+    this._res = function (type) {
+      return {
+        info: (msg) => {
+          const payload = { ...msg }
+          payload["command"] = type
+          this._emitUpdate('info', payload)
+        },
+        error: (err) => {
+          this._emitUpdate('error', err)
+        },
+        end: () => {
+          // does nothing right now but may emit an event to indicate the command
+          // has finished in the future
+        }
       }
     }
     this.key = cabal.key
@@ -116,19 +120,19 @@ class CabalDetails extends EventEmitter {
     if (!cb) { cb = noop }
     var m = /^\/\s*(\w+)(?:\s+(.*))?/.exec(line.trimRight())
     if (m && this._commands[m[1]] && typeof this._commands[m[1]].call === 'function') {
-      this._commands[m[1]].call(this, this._res, m[2])
+      this._commands[m[1]].call(this, this._res(m[1]), m[2])
       this._emitUpdate('command', { command: m[1], arg: m[2] || '' })
     } else if (m && this._aliases[m[1]]) {
       var key = this._aliases[m[1]]
       if (this._commands[key]) {
-        this._commands[key].call(this, this._res, m[2])
+        this._commands[key].call(this, this._res(key), m[2])
         this._emitUpdate('command', { command: key, arg: m[2] || '' })
       } else {
-        this._res.info(`command for alias ${m[1]} => ${key} not found`)
+        this._res("warn").info(`command for alias ${m[1]} => ${key} not found`)
         cb()
       }
     } else if (m) {
-      this._res.info(`${m[1]} is not a command. type /help for commands`)
+      this._res("warn").info(`${m[1]} is not a command. type /help for commands`)
     } else if (this.chname !== '!status' && /\S/.test(line)) {
       // disallow typing to !status
       this.publishMessage({
