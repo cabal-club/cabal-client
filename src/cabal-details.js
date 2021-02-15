@@ -53,14 +53,17 @@ class CabalDetails extends EventEmitter {
     this.client = client
     this._commands = commands || {}
     this._aliases = aliases || {}
-    this._res = function (type) {
-      let seqno = 0
+    /* _res takes a type (cabal event typeas a string) and returns an object with the functions: info, error, end */
+    this._res = function (type) { // type: the type of event to emit (e.g. channel-join, new-message, topic etc)
+      let seqno = 0 // tracks # of sent info messages
       return {
         info: (msg, obj) => {
           let payload = (typeof msg === "string") ? { text: msg } : { ...msg }
-          if (typeof obj !== "undefined") payload === { ...payload, ...obj }
+          if (typeof obj !== "undefined") payload = { ...payload, ...obj }
+
           payload["command"] = type
           payload["seqno"] = seqno++
+
           this._emitUpdate('info', payload)
         },
         error: (err) => {
