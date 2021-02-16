@@ -56,7 +56,7 @@ class CabalDetails extends EventEmitter {
     /* _res takes a command (cabal event type, a string) and returns an object with the functions: info, error, end */
     this._res = function (command) { // command: the type of event emitting information (e.g. channel-join, new-message, topic etc)
       let seq = 0 // tracks # of sent info messages
-      const uid = timestamp() // id uniquely identifying this stream of events
+      const uid = `${timestamp()}` // id uniquely identifying this stream of events
       return {
         info: (msg, obj) => {
           let payload = (typeof msg === "string") ? { text: msg } : { ...msg }
@@ -307,7 +307,6 @@ class CabalDetails extends EventEmitter {
    * @param {string} [channel=this.chname]
    */
   clearVirtualMessages (channel = this.chname) {
-    console.error("clear messages in", channel)
     return this.channels[channel].clearVirtualMessages()
   }
 
