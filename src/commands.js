@@ -642,7 +642,7 @@ function parseNameToKeys (details, name) {
 
   const keys = []
 
-  // If it's a 64-character key, use JUST this, since it's umabiguous.
+  // If it's a 64-character key, use JUST this, since it's unambiguous.
   if (/^[0-9a-f]{64}$/.test(name)) {
     return [name]
   }
@@ -660,6 +660,15 @@ function parseNameToKeys (details, name) {
       keys.push(key)
     }
   })
+
+  // Is name actually just a pubkey (i.e. a peer w/o name set)?
+  if (keys.length === 0) { // check that keys === 0 to prevent impersonation by setting pubkey as their name
+    Object.keys(users).forEach(key => {
+      if (key.substring(0, name.length) === name && users[key].name === "") {
+        keys.push(key)
+      }
+    })
+  }
 
   return keys
 }
