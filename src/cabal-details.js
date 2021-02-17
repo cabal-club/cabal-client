@@ -29,6 +29,7 @@ class CabalDetails extends EventEmitter {
    * @constructor
    * @fires CabalDetails#update
    * @fires CabalDetails#init
+   * @fires CabalDetails#info
    * @fires CabalDetails#user-updated
    * @fires CabalDetails#new-channel
    * @fires CabalDetails#new-message
@@ -52,16 +53,25 @@ class CabalDetails extends EventEmitter {
     this.client = client
     this._commands = commands || {}
     this._aliases = aliases || {}
-    this._res = {
-      info: (msg) => {
-        this._emitUpdate('info', msg)
-      },
-      error: (err) => {
-        this._emitUpdate('error', err)
-      },
-      end: () => {
-        // does nothing right now but may emit an event to indicate the command
-        // has finished in the future
+    /* _res takes a command (cabal event type, a string) and returns an object with the functions: info, error, end */
+    this._res = function (command) { // command: the type of event emitting information (e.g. channel-join, new-message, topic etc)
+      let seq = 0 // tracks # of sent info messages
+      const uid = timestamp() // id uniquely identifying this stream of events
+      return {
+        info: (msg, obj) => {
+          let payload = (typeof msg === "string") ? { text: msg } : { ...msg }
+          if (typeof obj !== "undefined") payload = { ...payload, ...obj }
+          payload["meta"] = { uid, command, seq: seq++ }
+
+          this._emitUpdate('info', payload)
+        },
+        error: (err) => {
+          this._emitUpdate('error', err)
+        },
+        end: () => {
+          // emits an event to indicate the command has finished 
+          this._emitUpdate('end', { uid, command, seq })
+        }
       }
     }
     this.key = cabal.key
@@ -116,19 +126,17 @@ class CabalDetails extends EventEmitter {
     if (!cb) { cb = noop }
     var m = /^\/\s*(\w+)(?:\s+(.*))?/.exec(line.trimRight())
     if (m && this._commands[m[1]] && typeof this._commands[m[1]].call === 'function') {
-      this._commands[m[1]].call(this, this._res, m[2])
-      this._emitUpdate('command', { command: m[1], arg: m[2] || '' })
+      this._commands[m[1]].call(this, this._res(m[1]), m[2])
     } else if (m && this._aliases[m[1]]) {
       var key = this._aliases[m[1]]
       if (this._commands[key]) {
-        this._commands[key].call(this, this._res, m[2])
-        this._emitUpdate('command', { command: key, arg: m[2] || '' })
+        this._commands[key].call(this, this._res(key), m[2])
       } else {
-        this._res.info(`command for alias ${m[1]} => ${key} not found`)
+        this._res("warn").info(`command for alias ${m[1]} => ${key} not found`)
         cb()
       }
     } else if (m) {
-      this._res.info(`${m[1]} is not a command. type /help for commands`)
+      this._res("warn").info(`${m[1]} is not a command. type /help for commands`)
     } else if (this.chname !== '!status' && /\S/.test(line)) {
       // disallow typing to !status
       this.publishMessage({
@@ -299,6 +307,7 @@ class CabalDetails extends EventEmitter {
    * @param {string} [channel=this.chname]
    */
   clearVirtualMessages (channel = this.chname) {
+    console.error("clear messages in", channel)
     return this.channels[channel].clearVirtualMessages()
   }
 
@@ -548,6 +557,14 @@ class CabalDetails extends EventEmitter {
    *
    * Fires when any kind of change has happened to the cabal.
    * @event CabalDetails#update
+   */
+
+  /**
+   *
+   * Fires when a valid slash-command (/<command>) emits output. See src/commands.js for all commands & their payloads.
+   * @event CabalDetails#info
+   * @type {object}
+   * @property {string} command - The command that triggered the event & has emitted output
    */
 
   _emitUpdate (type, payload = null) {

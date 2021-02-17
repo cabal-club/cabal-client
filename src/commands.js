@@ -3,6 +3,7 @@ const pump = require('pump')
 const to = require('to2')
 const strftime = require('strftime')
 const paperslip = require("paperslip")
+const hrinames = require("human-readable-ids").hri // transitive dep via paperslip
 
 module.exports = {
   add: {
@@ -25,18 +26,21 @@ module.exports = {
     help: () => 'create a whisper link, a shortlived shortname alias for this cabal\'s key',
     category: ["sharing"],
     call: (cabal, res, arg) => {
-        if (arg === '') {
-            return res.error("you need to provide a shortname, e.g. 'workshop'")
+        if (typeof arg === "undefined" || arg === '') {
+            arg = hrinames.random()
         }
         const topic = `${arg}-${cabal.key.slice(0,3)}`
-        const whisperlink = `whisper://${topic}`
-        res.info("whispering on " + whisperlink + " for the next 5 minutes")
-        // currently this will logout ip addresses that join via the whisper key
+        const link = `whisper://${topic}`
+        const minutes = 5
+        const ttl = minutes * 60 * 1000 // time to live (how long the link is active)
+        res.info({ text: `whispering on ${link} for the next ${minutes} minutes`, link, ttl })
+        // NOTE: currently this will log which ip addresses join via the whisperlink
         const swarm = paperslip.write(topic, `cabal://${cabal.key}`, res.info) 
         setTimeout(() => {
             paperslip.stop(swarm)
-            res.info("stopped whispering " + topic)
-        }, 5 * 60 * 1000)
+            res.info(`stopped whispering ${link}`)
+            res.end()
+        }, ttl)
     }
   },
   new: {
@@ -160,11 +164,11 @@ module.exports = {
       var users = cabal.getUsers()
       var userkeys = Object.keys(users).map((key) => users[key]).sort(cmpUser)
       res.info('history of peers in cabal')
-      userkeys.map((u) => {
+      userkeys.map((u, i) => {
         var username = u.name || 'conspirator'
         var spaces = ' '.repeat(15)
         var paddedName = (username + spaces).slice(0, spaces.length)
-        res.info(`  ${paddedName} ${u.key}`)
+        res.info(`${i+1}.  ${paddedName} ${u.key}`)
       })
     }
   },
@@ -182,7 +186,6 @@ module.exports = {
         var userPart = count ? `: ${count} ${count === 1 ? 'person' : 'people'}` : ''
         res.info({
           text: `  ${joinedChannels.includes(c) ? '*' : ' '} ${c}${userPart} ${shortTopic}`,
-          command: "channels",
           channel: c,
           userCount: count,
           topic,
