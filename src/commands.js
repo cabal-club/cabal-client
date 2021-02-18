@@ -696,7 +696,7 @@ function flagCmd (cmd, cabal, res, arg) {
     res.info(`usage: /${cmd} NICK{.PUBKEY} {REASON...}`)
     return res.end()
   }
-  const channel = '@'
+  let channel = '@'
   var id = args[0]
   var keys = parseNameToKeys(cabal, id)
   if (keys.length === 0) {
@@ -713,7 +713,26 @@ function flagCmd (cmd, cabal, res, arg) {
   id = keys[0]
   var type = /^un/.test(cmd) ? 'remove' : 'add'
   var flag = cmd.replace(/^un/, '')
-  var reason = args.slice(1).join(' ')
+  let options = args.slice(1).join(' ')
+  let reason
+  // TODO: allow / iterate over multiple --channel hides in one invocation?
+  // if no --<option> flags are found, assume rest of input is the reason
+  if (options.indexOf("--") < 0) { 
+    reason = options 
+  } else {
+    // extract --<options>. currently implemented: --reason <reason>, --channel <channel>
+    // order does not matter
+    options = options.trim().split(/\s+--/).map(s => s.trim())
+    options.forEach(o => {
+      const i = o.indexOf(" ")
+      const opt = o.slice(0, i).trim()
+      if (opt === "reason") {
+        reason = o.slice(i).trim()
+      } else if (opt === "channel") {
+        channel = o.slice(i).trim()
+      }
+    })
+  }
   const reasonstr = reason ? '(reason: ' + reason + ')' : ''
   cabal.moderation.setFlag(flag, type, channel, id, reason).then(() => {
 	  if (['admin', 'mod'].includes(flag)) {
