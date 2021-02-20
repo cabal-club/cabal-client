@@ -715,44 +715,50 @@ function flagCmd (cmd, cabal, res, arg) {
   var flag = cmd.replace(/^un/, '')
   let options = args.slice(1).join(' ')
   let reason
+  
   // TODO: allow / iterate over multiple --channel hides in one invocation?
-  // if no --<option> flags are found, assume rest of input is the reason
+  
+  // if no --<option> flags are found, assume the rest of the input is contains the reason
   if (options.indexOf("--") < 0) { 
     reason = options 
   } else {
-    // extract --<options>. currently implemented: --reason <reason>, --channel <channel>
-    // order does not matter
-    options = options.trim().split(/\s+--/).map(s => s.trim())
-    options.forEach(o => {
-      const i = o.indexOf(" ")
-      const opt = o.slice(0, i).trim()
-      if (opt === "reason") {
-        reason = o.slice(i).trim()
-      } else if (opt === "channel") {
-        channel = o.slice(i).trim()
+    // extract --<option>. the currently implemented options are: --reason <reason>, --channel <channel>
+    // option order does not matter: --reason foo --channel bar and --channel bar --reason foo are equivalent
+    options = options.trim().split(/(\s+|^)--/).map(s => s.trim()).filter(s => s !== "")
+    options.forEach(option => {
+      const i = option.indexOf(" ")
+      const optionType = option.slice(0, i)
+      if (optionType === "reason") {
+        reason = option.slice(i).trim()
+      } else if (optionType === "channel") {
+        channel = option.slice(i).trim()
+        if (typeof cabal.channels[channel] === "undefined") {
+          return res.error(`channel ${channel} does not exist`)
+        }
       }
     })
   }
-  const reasonstr = reason ? '(reason: ' + reason + ')' : ''
+
   cabal.moderation.setFlag(flag, type, channel, id, reason).then(() => {
+    const peerName = getPeerName(cabal, id)
 	  if (['admin', 'mod'].includes(flag)) {
       if (/^un/.test(cmd) && flag === 'mod' && !cabal.users[id].isModerator()) {
-        res.error(`${getPeerName(cabal, id)} is not a mod`)
+        res.error(`${peerName} is not a mod`)
       } else if (/^un/.test(cmd) && flag === 'admin' && !cabal.users[id].isAdmin()) {
-        res.error(`${getPeerName(cabal, id)} is not an admin`)
+        res.error(`${peerName} is not an admin`)
       } else if (!/^un/.test(cmd) && flag === 'mod' && cabal.users[id].isModerator()) {
-        res.error(`${getPeerName(cabal, id)} is already a mod`)
+        res.error(`${peerName} is already a mod`)
       } else if (!/^un/.test(cmd) && flag === 'admin' && cabal.users[id].isAdmin()) {
-        res.error(`${getPeerName(cabal, id)} is already an admin`)
+        res.error(`${peerName} is already an admin`)
       }
 	  } else {
       if (/^un/.test(cmd)) {
-        if (!cabal.users[id].isHidden()) {
-          res.error(`cannot unhide ${getPeerName(cabal, id)}: they are not hidden`)
+        if (!cabal.users[id].isHidden(channel)) {
+          res.error(`cannot unhide ${peerName}: they are not hidden`)
         }
       } else {
-        if (cabal.users[id].isHidden()) {
-          res.error(`${getPeerName(cabal, id)} is already hidden`)
+        if (cabal.users[id].isHidden(channel)) {
+          res.error(`${peerName} is already hidden`)
         }
       }
 	  }
