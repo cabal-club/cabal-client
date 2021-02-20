@@ -716,8 +716,6 @@ function flagCmd (cmd, cabal, res, arg) {
   let options = args.slice(1).join(' ')
   let reason
   
-  // TODO: allow / iterate over multiple --channel hides in one invocation?
-  
   // if no --<option> flags are found, assume the rest of the input is contains the reason
   if (options.indexOf("--") < 0) { 
     reason = options 
@@ -739,29 +737,31 @@ function flagCmd (cmd, cabal, res, arg) {
     })
   }
 
+  const peerName = getPeerName(cabal, id)
+  const placeModifier = channel === "@" ? "for the entire cabal" : `in channel ${channel}`
+	if (['admin', 'mod'].includes(flag)) {
+    if (/^un/.test(cmd) && flag === 'mod' && !cabal.users[id].isModerator(channel)) {
+      return res.error(`${peerName} is not a mod ${placeModifier}`)
+    } else if (/^un/.test(cmd) && flag === 'admin' && !cabal.users[id].isAdmin(channel)) {
+      return res.error(`${peerName} is not an admin ${placeModifier}`)
+    } else if (!/^un/.test(cmd) && flag === 'mod' && cabal.users[id].isModerator(channel)) {
+      return res.error(`${peerName} is already a mod ${placeModifier}`)
+    } else if (!/^un/.test(cmd) && flag === 'admin' && cabal.users[id].isAdmin(channel)) {
+      return res.error(`${peerName} is already an admin ${placeModifier}`)
+    }
+	} else {
+    if (/^un/.test(cmd)) {
+      if (!cabal.users[id].isHidden(channel)) {
+        return res.error(`cannot unhide ${peerName}: they are not hidden`)
+      }
+    } else {
+      if (cabal.users[id].isHidden(channel)) {
+        return res.error(`${peerName} is already hidden`)
+      }
+    }
+	}
+
   cabal.moderation.setFlag(flag, type, channel, id, reason).then(() => {
-    const peerName = getPeerName(cabal, id)
-	  if (['admin', 'mod'].includes(flag)) {
-      if (/^un/.test(cmd) && flag === 'mod' && !cabal.users[id].isModerator()) {
-        res.error(`${peerName} is not a mod`)
-      } else if (/^un/.test(cmd) && flag === 'admin' && !cabal.users[id].isAdmin()) {
-        res.error(`${peerName} is not an admin`)
-      } else if (!/^un/.test(cmd) && flag === 'mod' && cabal.users[id].isModerator()) {
-        res.error(`${peerName} is already a mod`)
-      } else if (!/^un/.test(cmd) && flag === 'admin' && cabal.users[id].isAdmin()) {
-        res.error(`${peerName} is already an admin`)
-      }
-	  } else {
-      if (/^un/.test(cmd)) {
-        if (!cabal.users[id].isHidden(channel)) {
-          res.error(`cannot unhide ${peerName}: they are not hidden`)
-        }
-      } else {
-        if (cabal.users[id].isHidden(channel)) {
-          res.error(`${peerName} is already hidden`)
-        }
-      }
-	  }
     res.end()
   }).catch((err) => { res.error(err) })
 }
