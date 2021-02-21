@@ -739,7 +739,7 @@ function flagCmd (cmd, cabal, res, arg) {
 
   const peerName = getPeerName(cabal, id)
   const placeModifier = channel === "@" ? "for the entire cabal" : `in channel ${channel}`
-	if (['admin', 'mod'].includes(flag)) {
+  if (['admin', 'mod'].includes(flag)) {
     if (/^un/.test(cmd) && flag === 'mod' && !cabal.users[id].isModerator(channel)) {
       return res.error(`${peerName} is not a mod ${placeModifier}`)
     } else if (/^un/.test(cmd) && flag === 'admin' && !cabal.users[id].isAdmin(channel)) {
@@ -749,7 +749,7 @@ function flagCmd (cmd, cabal, res, arg) {
     } else if (!/^un/.test(cmd) && flag === 'admin' && cabal.users[id].isAdmin(channel)) {
       return res.error(`${peerName} is already an admin ${placeModifier}`)
     }
-	} else {
+  } else {
     if (/^un/.test(cmd)) {
       if (!cabal.users[id].isHidden(channel)) {
         return res.error(`cannot unhide ${peerName}: they are not hidden`)
@@ -759,7 +759,7 @@ function flagCmd (cmd, cabal, res, arg) {
         return res.error(`${peerName} is already hidden`)
       }
     }
-	}
+  }
 
   cabal.moderation.setFlag(flag, type, channel, id, reason).then(() => {
     res.end()
