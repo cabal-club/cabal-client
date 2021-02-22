@@ -65,14 +65,14 @@ class Moderation {
   setFlag (flag, type, channel = '@', id, reason = '') {
     // a list of [[id, reason]] was passed in
     if (typeof id === 'object' && typeof id[Symbol.iterator] === 'function') {
-	  const promises = id.map((entry) => {
+      const promises = id.map((entry) => {
         return new Promise((resolve, reject) => {
-		  this._flagCmd(flag, type, channel, entry[0], entry[1], (err) => {
+          this._flagCmd(flag, type, channel, entry[0], entry[1], (err) => {
             if (err) { return reject(err) } else { resolve() }
-		  })
+          })
         })
-	  })
-	  return Promise.all(promises)
+      })
+      return Promise.all(promises)
     }
     return new Promise((resolve, reject) => {
       this._flagCmd(flag, type, channel, id, reason, (err) => {
