@@ -8,6 +8,8 @@ class ChannelDetailsBase {
 
     this.members = new Set()
     this.mentions = []
+    /* archived channels are not visible in channel listings */
+    this.archived = false
     this.virtualMessages = []
     this.newMessageCount = 0
     this.datesSeen = new Set()
@@ -23,6 +25,14 @@ class ChannelDetailsBase {
 
   toString () {
     return this.name
+  }
+
+  archive () {
+    this.archived = true
+  }
+
+  unarchive () {
+    this.archived = false
   }
 
   addMember (key) {

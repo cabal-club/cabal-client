@@ -22,6 +22,73 @@ module.exports = {
       }
     }
   },
+  archive: {
+    help: () => 'archive a channel',
+    category: ["channels"],
+    call: (cabal, res, arg) => {
+      const reason = "" // TODO: force --reason flag if adding reason?
+      if (typeof arg === "undefined" || arg.length <= 0) {
+        return res.error("you need to specify the channel to archive")
+      } else if (typeof cabal.channels[arg] === "undefined") {
+        return res.error(`${arg} does not exist`)
+      } else if (arg === "!status") {
+        res.error("the !status channel cannot be archived")
+      }
+      res.info(`archiving ${arg}`)
+      cabal.publishMessage({
+        type: 'channel/archive',
+        content: {
+          channel: arg,
+          reason
+        }
+      }, {}, (err) => {
+        if (err) res.error(err)
+        else res.end()
+      })
+    }
+  },
+  unarchive: {
+    help: () => 'unarchive a channel',
+    category: ["channels"],
+    alias: ['restore'],
+    call: (cabal, res, arg) => {
+      const reason = "" // TODO
+      if (typeof arg === "undefined" || arg.length <= 0) {
+        return res.error("you need to specify the channel to unarchive")
+      } else if (typeof cabal.channels[arg] === "undefined") {
+        return res.error(`${arg} does not exist`)
+      } else if (arg === "!status") {
+        res.error("the !status channel cannot be archived (and so neither unarchived)")
+      }
+      res.info(`unarchiving ${arg}`)
+      cabal.publishMessage({
+        type: 'channel/unarchive',
+        content: {
+          channel: arg,
+          reason
+        }
+      }, {}, (err) => {
+        if (err) res.error(err)
+        else res.end()
+      })
+    }
+  },
+  archives: {
+    help: () => 'list the currently archived channels',
+    category: ["channels"],
+    alias: ["archived"],
+    call: (cabal, res, arg) => {
+      const archivedChannels = cabal.getChannels({ includeArchived: true }).filter(ch => cabal.channels[ch].archived)
+      if (archivedChannels.length === 0) {
+        res.info("no channels are archived")
+      } else {
+        res.info("archived channels:")
+        archivedChannels.forEach(channel => {
+          res.info(channel)
+        })
+      }
+    }
+  },
   whisper: {
     help: () => 'create a whisper link, a shortlived shortname alias for this cabal\'s key',
     category: ["sharing"],

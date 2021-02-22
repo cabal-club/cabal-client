@@ -276,10 +276,14 @@ class CabalDetails extends EventEmitter {
   }
 
   /**
-   * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members.
+   * @param {object} [opts]
+   * @property {boolean} archived - Determines whether to include archived channels or not. Defaults to false.
+   * * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members.
    */
-  getChannels () {
-    return Object.keys(this.channels).filter(ch => this.channels[ch].members.size > 0).sort()
+  getChannels (opts) {
+    if (!opts) opts = { includeArchived: false }
+    return Object.keys(this.channels).filter(ch => this.channels[ch].members.size > 0 && (opts.includeArchived ? true : !this.channels[ch].archived))
+    .sort()
   }
 
   // returns a ChannelDetails object
@@ -620,24 +624,30 @@ class CabalDetails extends EventEmitter {
 
   _initialize (done) {
     const cabal = this.core
-    // populate channels
-    cabal.channels.get((err, channels) => {
-      channels.forEach((channel) => {
-        const details = this.channels[channel]
-        if (!details) {
-          this.channels[channel] = new ChannelDetails(cabal, channel)
-        }
-        // listen for updates that happen within the channel
-        cabal.messages.events.on(channel, this.messageListener.bind(this))
+    cabal.archives.get((err, archivedChannels) => {
+      // populate channels
+      cabal.channels.get((err, channels) => {
+        channels.forEach((channel) => {
+          const details = this.channels[channel]
+          if (!details) {
+            this.channels[channel] = new ChannelDetails(cabal, channel)
+          }
+          // mark archived channels as such
+          if (archivedChannels.indexOf(channel) >= 0) {
+            this.channels[channel].archive()
+          }
+          // listen for updates that happen within the channel
+          cabal.messages.events.on(channel, this.messageListener.bind(this))
 
-        // add all users joined to a channel
-        cabal.memberships.getUsers(channel, (err, users) => {
-          users.forEach((u) => this.channels[channel].addMember(u))
-        })
+          // add all users joined to a channel
+          cabal.memberships.getUsers(channel, (err, users) => {
+            users.forEach((u) => this.channels[channel].addMember(u))
+          })
 
-        // for each channel, get the topic
-        cabal.topics.get(channel, (err, topic) => {
-          this.channels[channel].topic = topic || ''
+          // for each channel, get the topic
+          cabal.topics.get(channel, (err, topic) => {
+            this.channels[channel].topic = topic || ''
+          })
         })
       })
     })
@@ -660,6 +670,28 @@ class CabalDetails extends EventEmitter {
           this.channels[channel].joined = true
         }
       })
+    })
+
+    // notify when a user has archived a channel
+    this.registerListener(cabal.archives.events, 'archive', (channel, reason, key) => {
+      const user = this.users[key]
+      if (key !== this.user.key && (!user || (!user.isModerator() && !user.isAdmin()))) { return }
+      if (!this.channels[channel]) {
+        this.channels[channel] = new ChannelDetails(this.core, channel)
+      }
+      this.channels[channel].archive()
+      this._emitUpdate('channel-archive', { channel, reason, key, isLocal: key === this.user.key })
+    })
+
+    // notify when a user has restored an archived channel
+    this.registerListener(cabal.archives.events, 'unarchive', (channel, reason, key) => {
+      const user = this.users[key]
+      if (key !== this.user.key && (!user || (!user.isModerator() && !user.isAdmin()))) { return }
+      if (!this.channels[channel]) {
+        this.channels[channel] = new ChannelDetails(this.core, channel)
+      }
+      this.channels[channel].unarchive()
+      this._emitUpdate('channel-unarchive', { channel, reason, key, isLocal: key === this.user.key })
     })
 
     // notify when a user has joined a channel
