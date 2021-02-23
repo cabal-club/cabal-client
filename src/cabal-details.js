@@ -277,7 +277,7 @@ class CabalDetails extends EventEmitter {
 
   /**
    * @param {object} [opts]
-   * @property {boolean} archived - Determines whether to include archived channels or not. Defaults to false.
+   * @property {boolean} includeArchived - Determines whether to include archived channels or not. Defaults to false.
    * * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members.
    */
   getChannels (opts) {
@@ -410,6 +410,66 @@ class CabalDetails extends EventEmitter {
         cb(null)
       })
     }
+  }
+
+  /**
+   * Archive a channel. Publishes a message announcing
+   * that you have archived the channel, applying it to the views of others who have you as a moderator/admin.
+   * @param {string} channel
+   * @param {string} [reason]
+   * @param {function} cb - callback invoked when the operation has finished, with error as its only parameter
+   */
+  archive (channel, reason = "", cb) {
+    if (!cb) cb = noop
+    const details = this.channels[channel]
+
+    if (channel === '!status') {
+      return nextTick(cb, new Error('cannot archive the !status channel'))
+    }
+    if (!details) {
+      return nextTick(cb, new Error('cannot archive non-existent channel'))
+    }
+    this.channels[channel].archive()
+    this.publishMessage({
+      type: 'channel/archive',
+      content: {
+        channel,
+        reason
+      }
+    }, {}, (err) => {
+      if (err) cb(err)
+      else cb()
+    })
+  }
+
+  /**
+   * Unarchive a channel. Publishes a message announcing
+   * that you have unarchived the channel.
+   * @param {string} channel
+   * @param {string} [reason]
+   * @param {function} cb - callback invoked when the operation has finished, with error as its only parameter
+   */
+  unarchive (channel, reason = "", cb) {
+    if (!cb) cb = noop
+    const details = this.channels[channel]
+
+    if (channel === '!status') {
+      return nextTick(cb, new Error('cannot unarchive the !status channel'))
+    }
+    if (!details) {
+      return nextTick(cb, new Error('cannot unarchive non-existent channel'))
+    }
+    this.channels[channel].unarchive()
+    this.publishMessage({
+      type: 'channel/unarchive',
+      content: {
+        channel,
+        reason
+      }
+    }, {}, (err) => {
+      if (err) cb(err)
+      else cb()
+    })
   }
 
   /**

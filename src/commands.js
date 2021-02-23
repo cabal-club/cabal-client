@@ -35,13 +35,7 @@ module.exports = {
         res.error("the !status channel cannot be archived")
       }
       res.info(`archiving ${arg}`)
-      cabal.publishMessage({
-        type: 'channel/archive',
-        content: {
-          channel: arg,
-          reason
-        }
-      }, {}, (err) => {
+      cabal.archive(arg, reason, (err) => {
         if (err) res.error(err)
         else res.end()
       })
@@ -61,13 +55,7 @@ module.exports = {
         res.error("the !status channel cannot be archived (and so neither unarchived)")
       }
       res.info(`unarchiving ${arg}`)
-      cabal.publishMessage({
-        type: 'channel/unarchive',
-        content: {
-          channel: arg,
-          reason
-        }
-      }, {}, (err) => {
+      cabal.unarchive(arg, reason, (err) => {
         if (err) res.error(err)
         else res.end()
       })
