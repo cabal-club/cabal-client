@@ -79,14 +79,25 @@ module.exports = {
     alias: ["archived"],
     call: (cabal, res, arg) => {
       const archivedChannels = cabal.getChannels({ includeArchived: true }).filter(ch => cabal.channels[ch].archived)
+      res.info("all archived channels:")
       if (archivedChannels.length === 0) {
         res.info("no channels are archived")
       } else {
-        res.info("archived channels:")
         archivedChannels.forEach(channel => {
           res.info(channel)
         })
       }
+      cabal.core.archives.getUnarchived(cabal.user.key, (err, unarchivedChannels) => {
+        res.info("your unarchived channels:")
+        if (unarchivedChannels.length === 0) {
+          res.info("no channels are unarchived")
+        } else {
+          unarchivedChannels.forEach(channel => {
+            res.info(channel)
+          })
+        }
+        res.end()
+      })
     }
   },
   whisper: {
@@ -805,7 +816,7 @@ function flagCmd (cmd, cabal, res, arg) {
   }
 
   const peerName = getPeerName(cabal, id)
-  const placeModifier = channel === "@" ? "for the entire cabal" : `in channel ${channel}`
+  const placeModifier = channel === '@' ? 'for the entire cabal' : `in channel ${channel}`
   if (['admin', 'mod'].includes(flag)) {
     if (/^un/.test(cmd) && flag === 'mod' && !cabal.users[id].isModerator(channel)) {
       return res.error(`${peerName} is not a mod ${placeModifier}`)
@@ -829,7 +840,19 @@ function flagCmd (cmd, cabal, res, arg) {
   }
 
   cabal.moderation.setFlag(flag, type, channel, id, reason).then(() => {
-    res.end()
+    // we added a new mod => process archived channels
+    if (['mod', 'admin'].indexOf(flag) >= 0) {
+      // set currently archived status according to current mods
+      cabal.core.archives.get((err, archivedChannels) => {
+        cabal.getChannels({ includeArchived: true }).forEach(ch => cabal.channels[ch].unarchive()) // reset archive status
+        archivedChannels.forEach(ch => {
+          if (cabal.channels[ch]) { cabal.channels[ch].archive() }
+        })
+        res.end()
+      })
+    } else {
+      res.end()
+    }
   }).catch((err) => { res.error(err) })
 }
 
