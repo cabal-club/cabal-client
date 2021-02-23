@@ -412,6 +412,7 @@ module.exports = {
       res.info('moderation commands')
       res.info('\nbasic actions. the basic actions will be published to your log')
       res.info('USAGE /<cmd> NICK{.PUBKEY} {REASON...}')
+      res.info('      /<cmd> NICK{.PUBKEY} --channel <channel name> --reason <reason>')
       baseCmds.forEach((base) => {
         res.info(`/${base}: ${module.exports[base].help()}`)
         const reverse = `un${base}`
