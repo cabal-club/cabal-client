@@ -281,9 +281,12 @@ class CabalDetails extends EventEmitter {
    * * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members.
    */
   getChannels (opts) {
-    if (!opts) opts = { includeArchived: false }
-    return Object.keys(this.channels).filter(ch => this.channels[ch].members.size > 0 && (opts.includeArchived ? true : !this.channels[ch].archived))
-    .sort()
+    if (!opts || typeof opts !== "object" || opts[Symbol.iterator]) { 
+      opts = { includeArchived: false } 
+    }
+    return Object.keys(this.channels)
+      .filter(ch => this.channels[ch].members.size > 0 && (opts.includeArchived || !this.channels[ch].archived))
+      .sort()
   }
 
   // returns a ChannelDetails object
@@ -417,17 +420,21 @@ class CabalDetails extends EventEmitter {
    * that you have archived the channel, applying it to the views of others who have you as a moderator/admin.
    * @param {string} channel
    * @param {string} [reason]
-   * @param {function} cb - callback invoked when the operation has finished, with error as its only parameter
+   * @param {function} cb(err) - callback invoked when the operation has finished, with error as its only parameter
    */
   archiveChannel (channel, reason = "", cb) {
     if (!cb) cb = noop
     const details = this.channels[channel]
 
     if (channel === '!status') {
-      return nextTick(cb, new Error('cannot archive the !status channel'))
+      const err = new Error('cannot archive the !status channel')
+      debug(err)
+      return nextTick(cb, err)
     }
     if (!details) {
-      return nextTick(cb, new Error('cannot archive non-existent channel'))
+      const err = new Error('cannot archive non-existent channel')
+      debug(err)
+      return nextTick(cb, err)
     }
     this.channels[channel].archive()
     this.publishMessage({
@@ -436,10 +443,7 @@ class CabalDetails extends EventEmitter {
         channel,
         reason
       }
-    }, {}, (err) => {
-      if (err) cb(err)
-      else cb()
-    })
+    }, {}, cb)
   }
 
   /**
@@ -447,17 +451,21 @@ class CabalDetails extends EventEmitter {
    * that you have unarchived the channel.
    * @param {string} channel
    * @param {string} [reason]
-   * @param {function} cb - callback invoked when the operation has finished, with error as its only parameter
+   * @param {function} cb(err) - callback invoked when the operation has finished, with error as its only parameter
    */
   unarchiveChannel (channel, reason = "", cb) {
     if (!cb) cb = noop
     const details = this.channels[channel]
 
     if (channel === '!status') {
-      return nextTick(cb, new Error('cannot unarchive the !status channel'))
+      const err = new Error('cannot unarchive the !status channel')
+      debug(err)
+      return nextTick(cb, err)
     }
     if (!details) {
-      return nextTick(cb, new Error('cannot unarchive non-existent channel'))
+      const err = new Error('cannot unarchive non-existent channel')
+      debug(err)
+      return nextTick(cb, err)
     }
     this.channels[channel].unarchive()
     this.publishMessage({
@@ -466,10 +474,7 @@ class CabalDetails extends EventEmitter {
         channel,
         reason
       }
-    }, {}, (err) => {
-      if (err) cb(err)
-      else cb()
-    })
+    }, {}, cb)
   }
 
   isChannelArchived(channel) {
@@ -740,23 +745,25 @@ class CabalDetails extends EventEmitter {
     // notify when a user has archived a channel
     this.registerListener(cabal.archives.events, 'archive', (channel, reason, key) => {
       const user = this.users[key]
-      if (key !== this.user.key && (!user || !user.canModerate())) { return }
+      const isLocal = key === this.user.key 
+      if (!isLocal && (!user || !user.canModerate())) { return }
       if (!this.channels[channel]) {
         this.channels[channel] = new ChannelDetails(this.core, channel)
       }
       this.channels[channel].archive()
-      this._emitUpdate('channel-archive', { channel, reason, key, isLocal: key === this.user.key })
+      this._emitUpdate('channel-archive', { channel, reason, key, isLocal })
     })
 
     // notify when a user has restored an archived channel
     this.registerListener(cabal.archives.events, 'unarchive', (channel, reason, key) => {
       const user = this.users[key]
-      if (key !== this.user.key && (!user || !user.canModerate())) { return }
+      const isLocal = key === this.user.key 
+      if (!isLocal && (!user || !user.canModerate())) { return }
       if (!this.channels[channel]) {
         this.channels[channel] = new ChannelDetails(this.core, channel)
       }
       this.channels[channel].unarchive()
-      this._emitUpdate('channel-unarchive', { channel, reason, key, isLocal: key === this.user.key })
+      this._emitUpdate('channel-unarchive', { channel, reason, key, isLocal })
     })
 
     // notify when a user has joined a channel
