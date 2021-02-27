@@ -419,7 +419,7 @@ class CabalDetails extends EventEmitter {
    * @param {string} [reason]
    * @param {function} cb - callback invoked when the operation has finished, with error as its only parameter
    */
-  archive (channel, reason = "", cb) {
+  archiveChannel (channel, reason = "", cb) {
     if (!cb) cb = noop
     const details = this.channels[channel]
 
@@ -449,7 +449,7 @@ class CabalDetails extends EventEmitter {
    * @param {string} [reason]
    * @param {function} cb - callback invoked when the operation has finished, with error as its only parameter
    */
-  unarchive (channel, reason = "", cb) {
+  unarchiveChannel (channel, reason = "", cb) {
     if (!cb) cb = noop
     const details = this.channels[channel]
 
@@ -470,6 +470,11 @@ class CabalDetails extends EventEmitter {
       if (err) cb(err)
       else cb()
     })
+  }
+
+  isChannelArchived(channel) {
+    if (!this.channels[channel]) return false
+    return this.channels[channel].archived
   }
 
   /**
@@ -735,7 +740,7 @@ class CabalDetails extends EventEmitter {
     // notify when a user has archived a channel
     this.registerListener(cabal.archives.events, 'archive', (channel, reason, key) => {
       const user = this.users[key]
-      if (key !== this.user.key && (!user || (!user.isModerator() && !user.isAdmin()))) { return }
+      if (key !== this.user.key && (!user || !user.canModerate())) { return }
       if (!this.channels[channel]) {
         this.channels[channel] = new ChannelDetails(this.core, channel)
       }
@@ -746,7 +751,7 @@ class CabalDetails extends EventEmitter {
     // notify when a user has restored an archived channel
     this.registerListener(cabal.archives.events, 'unarchive', (channel, reason, key) => {
       const user = this.users[key]
-      if (key !== this.user.key && (!user || (!user.isModerator() && !user.isAdmin()))) { return }
+      if (key !== this.user.key && (!user || !user.canModerate())) { return }
       if (!this.channels[channel]) {
         this.channels[channel] = new ChannelDetails(this.core, channel)
       }

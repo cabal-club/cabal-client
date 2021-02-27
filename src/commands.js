@@ -35,7 +35,7 @@ module.exports = {
         res.error("the !status channel cannot be archived")
       }
       res.info(`archiving ${arg}`)
-      cabal.archive(arg, reason, (err) => {
+      cabal.archiveChannel(arg, reason, (err) => {
         if (err) res.error(err)
         else res.end()
       })
@@ -55,7 +55,7 @@ module.exports = {
         res.error("the !status channel cannot be archived (and so neither unarchived)")
       }
       res.info(`unarchiving ${arg}`)
-      cabal.unarchive(arg, reason, (err) => {
+      cabal.unarchiveChannel(arg, reason, (err) => {
         if (err) res.error(err)
         else res.end()
       })
@@ -67,6 +67,7 @@ module.exports = {
     alias: ["archived"],
     call: (cabal, res, arg) => {
       const archivedChannels = cabal.getChannels({ includeArchived: true }).filter(ch => cabal.channels[ch].archived)
+
       res.info("all archived channels:")
       if (archivedChannels.length === 0) {
         res.info("no channels are archived")
@@ -75,10 +76,11 @@ module.exports = {
           res.info(channel)
         })
       }
+
       cabal.core.archives.getUnarchived(cabal.user.key, (err, unarchivedChannels) => {
-        res.info("your unarchived channels:")
+        res.info("channels you have restored:")
         if (unarchivedChannels.length === 0) {
-          res.info("no channels are unarchived")
+          res.info("there are no restored channels. restore an archived channel with /unarchive <channel name>")
         } else {
           unarchivedChannels.forEach(channel => {
             res.info(channel)
