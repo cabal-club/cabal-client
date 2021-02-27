@@ -98,7 +98,7 @@ module.exports = {
         res.info("no channels are archived")
       } else {
         archivedChannels.forEach(channel => {
-          res.info(channel)
+          res.info(`  ${channel}`, { channel })
         })
       }
 
@@ -108,7 +108,7 @@ module.exports = {
           res.info("there are no restored channels. restore an archived channel with /unarchive <channel name>")
         } else {
           unarchivedChannels.forEach(channel => {
-            res.info(channel)
+              res.info(`  ${channel}`, { channel })
           })
         }
         res.end()
