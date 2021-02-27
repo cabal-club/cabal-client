@@ -26,16 +26,29 @@ module.exports = {
     help: () => 'archive a channel',
     category: ["channels"],
     call: (cabal, res, arg) => {
-      const reason = "" // TODO: force --reason flag if adding reason?
       if (typeof arg === "undefined" || arg.length <= 0) {
         return res.error("you need to specify the channel to archive")
-      } else if (typeof cabal.channels[arg] === "undefined") {
-        return res.error(`${arg} does not exist`)
-      } else if (arg === "!status") {
-        res.error("the !status channel cannot be archived")
       }
-      res.info(`archiving ${arg}`)
-      cabal.archiveChannel(arg, reason, (err) => {
+
+      let channel = arg
+      let reason = ''
+      if (arg.indexOf("--") >= 0) {
+        options = parseOptions(arg)
+        console.error("options", options)
+        reason = options["reason"] || reason
+        channel = options["channel"] || arg.slice(0, arg.indexOf("--")).trim()
+      }
+
+      if (typeof cabal.channels[channel] === "undefined") {
+        return res.error(`${arg} does not exist`)
+      } else if (channel === "!status") {
+        return res.error("the !status channel cannot be archived")
+      } else if (cabal.isChannelArchived(channel)) {
+        return res.error(`channel ${channel} is already archived`)
+      }
+
+      res.info(`archived ${channel}`)
+      cabal.archiveChannel(channel, reason, (err) => {
         if (err) res.error(err)
         else res.end()
       })
@@ -46,16 +59,28 @@ module.exports = {
     category: ["channels"],
     alias: ['restore'],
     call: (cabal, res, arg) => {
-      const reason = "" // TODO
       if (typeof arg === "undefined" || arg.length <= 0) {
         return res.error("you need to specify the channel to unarchive")
-      } else if (typeof cabal.channels[arg] === "undefined") {
-        return res.error(`${arg} does not exist`)
-      } else if (arg === "!status") {
-        res.error("the !status channel cannot be archived (and so neither unarchived)")
+      } 
+
+      let channel = arg
+      let reason = ''
+      if (arg.indexOf("--") >= 0) {
+        options = parseOptions(arg)
+        reason = options["reason"] || reason
+        channel = options["channel"] || arg.slice(0, arg.indexOf("--")).trim()
       }
-      res.info(`unarchiving ${arg}`)
-      cabal.unarchiveChannel(arg, reason, (err) => {
+      
+      if (typeof cabal.channels[channel] === "undefined") {
+        return res.error(`${channel} does not exist`)
+      } else if (channel === "!status") {
+        return res.error("the !status channel cannot be archived (and so neither unarchived)")
+      } else if (!cabal.isChannelArchived(channel)) {
+        return res.error(`channel ${channel} is not archived`)
+      }
+
+      res.info(`restored ${channel}`)
+      cabal.unarchiveChannel(channel, reason, (err) => {
         if (err) res.error(err)
         else res.end()
       })
@@ -750,6 +775,17 @@ function getPeerName (details, key) {
   return key
 }
 
+function parseOptions (input) {
+  const output = {}
+  const options = input.slice(input.indexOf("--")).split(/(\s+|^)--/).map(s => s.trim()).filter(s => s !== "")
+  options.forEach(option => {
+    const i = option.indexOf(" ")
+    const optionType = option.slice(0, i)
+    output[optionType] = option.slice(i).trim()
+  })
+  return output
+}
+
 function cmpUser (a, b) {
   if (a.online && !b.online) return -1
   if (b.online && !a.online) return 1
@@ -791,19 +827,12 @@ function flagCmd (cmd, cabal, res, arg) {
   } else {
     // extract --<option>. the currently implemented options are: --reason <reason>, --channel <channel>
     // option order does not matter: --reason foo --channel bar and --channel bar --reason foo are equivalent
-    options = options.trim().split(/(\s+|^)--/).map(s => s.trim()).filter(s => s !== "")
-    options.forEach(option => {
-      const i = option.indexOf(" ")
-      const optionType = option.slice(0, i)
-      if (optionType === "reason") {
-        reason = option.slice(i).trim()
-      } else if (optionType === "channel") {
-        channel = option.slice(i).trim()
-        if (typeof cabal.channels[channel] === "undefined") {
-          return res.error(`channel ${channel} does not exist`)
-        }
-      }
-    })
+    options = parseOptions(options)
+    reason = options["reason"] || ''
+    channel = options["channel"] || channel
+    if (typeof cabal.channels[channel] === "undefined") {
+      return res.error(`channel ${channel} does not exist`)
+    }
   }
 
   const peerName = getPeerName(cabal, id)
