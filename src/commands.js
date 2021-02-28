@@ -819,7 +819,7 @@ function flagCmd (cmd, cabal, res, arg) {
 
   let { channel, reason } = extractChannelReasonOptions(options, "@", options) // if --channel option missin: assume default channel is '@' 
 
-  if (channel != "@" && typeof cabal.channels[channel] === "undefined") {
+  if (channel !== "@" && typeof cabal.channels[channel] === "undefined") {
     return res.error(`channel ${channel} does not exist`)
   }
 
