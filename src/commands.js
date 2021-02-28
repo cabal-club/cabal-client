@@ -771,17 +771,18 @@ function parseOptions (input) {
   return output
 }
 
-function extractChannelReasonOptions (input, defaultChannel) {
+// extract --<option>. the currently implemented options are: --reason <reason>, --channel <channel>
+// option order does not matter: --reason foo --channel bar and --channel bar --reason foo are equivalent
+function extractChannelReasonOptions (input, defaultChannel, defaultReason = '') {
   let channel = defaultChannel
-  let reason = ''
+  let reason = defaultReason
   if (input.indexOf("--") >= 0) {
-    options = parseOptions(input)
-    reason = options["reason"] || reason
+    const options = parseOptions(input)
     channel = options["channel"] || channel
+    reason = options["reason"] || reason
   }
   return { channel, reason }
 }
-
 
 function cmpUser (a, b) {
   if (a.online && !b.online) return -1
@@ -798,7 +799,6 @@ function flagCmd (cmd, cabal, res, arg) {
     res.info(`usage: /${cmd} NICK{.PUBKEY} {REASON...}`)
     return res.end()
   }
-  let channel = '@'
   var id = args[0]
   var keys = parseNameToKeys(cabal, id)
   if (keys.length === 0) {
@@ -815,21 +815,12 @@ function flagCmd (cmd, cabal, res, arg) {
   id = keys[0]
   var type = /^un/.test(cmd) ? 'remove' : 'add'
   var flag = cmd.replace(/^un/, '')
-  let options = args.slice(1).join(' ')
-  let reason
-  
-  // if no --<option> flags are found, assume the rest of the input is contains the reason
-  if (options.indexOf("--") < 0) { 
-    reason = options 
-  } else {
-    // extract --<option>. the currently implemented options are: --reason <reason>, --channel <channel>
-    // option order does not matter: --reason foo --channel bar and --channel bar --reason foo are equivalent
-    const result = extractChannelReasonOptions(options, channel)
-    channel = result["channel"]
-    reason = result["reason"]
-    if (typeof cabal.channels[channel] === "undefined") {
-      return res.error(`channel ${channel} does not exist`)
-    }
+  let options = args.slice(1).join(' ') // if no --<option> flags are found, assume `options` only contains the reason
+
+  let { channel, reason } = extractChannelReasonOptions(options, "@", options) // if --channel option missin: assume default channel is '@' 
+
+  if (channel != "@" && typeof cabal.channels[channel] === "undefined") {
+    return res.error(`channel ${channel} does not exist`)
   }
 
   const peerName = getPeerName(cabal, id)
