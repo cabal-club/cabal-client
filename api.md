@@ -494,7 +494,7 @@ Returns a string path of where all of the cabals are stored on the hard drive.
 <a name="CabalDetails"></a>
 
 ## CabalDetails
-**Emits**: [<code>update</code>](#CabalDetails+event_update), [<code>init</code>](#CabalDetails+event_init), [<code>user-updated</code>](#CabalDetails+event_user-updated), [<code>new-channel</code>](#CabalDetails+event_new-channel), [<code>new-message</code>](#CabalDetails+event_new-message), [<code>publish-message</code>](#CabalDetails+event_publish-message), [<code>publish-nick</code>](#CabalDetails+event_publish-nick), [<code>status-message</code>](#CabalDetails+event_status-message), [<code>topic</code>](#CabalDetails+event_topic), [<code>channel-focus</code>](#CabalDetails+event_channel-focus), [<code>channel-join</code>](#CabalDetails+event_channel-join), [<code>channel-leave</code>](#CabalDetails+event_channel-leave), [<code>cabal-focus</code>](#CabalDetails+event_cabal-focus), [<code>started-peering</code>](#CabalDetails+event_started-peering), [<code>stopped-peering</code>](#CabalDetails+event_stopped-peering)  
+**Emits**: [<code>update</code>](#CabalDetails+event_update), [<code>init</code>](#CabalDetails+event_init), [<code>info</code>](#CabalDetails+event_info), [<code>user-updated</code>](#CabalDetails+event_user-updated), [<code>new-channel</code>](#CabalDetails+event_new-channel), [<code>new-message</code>](#CabalDetails+event_new-message), [<code>publish-message</code>](#CabalDetails+event_publish-message), [<code>publish-nick</code>](#CabalDetails+event_publish-nick), [<code>status-message</code>](#CabalDetails+event_status-message), [<code>topic</code>](#CabalDetails+event_topic), [<code>channel-focus</code>](#CabalDetails+event_channel-focus), [<code>channel-join</code>](#CabalDetails+event_channel-join), [<code>channel-leave</code>](#CabalDetails+event_channel-leave), [<code>cabal-focus</code>](#CabalDetails+event_cabal-focus), [<code>started-peering</code>](#CabalDetails+event_started-peering), [<code>stopped-peering</code>](#CabalDetails+event_stopped-peering)  
 
 * [CabalDetails](#CabalDetails)
     * [new CabalDetails({, done)](#new_CabalDetails_new)
@@ -505,7 +505,7 @@ Returns a string path of where all of the cabals are stored on the hard drive.
     * [.getTopic([channel])](#CabalDetails+getTopic) ⇒ <code>string</code>
     * [.getChannelMembers([channel])](#CabalDetails+getChannelMembers) ⇒ <code>Array.&lt;object&gt;</code>
     * [.addStatusMessage(message, [channel])](#CabalDetails+addStatusMessage)
-    * [.getChannels()](#CabalDetails+getChannels) ⇒ <code>Array.&lt;string&gt;</code>
+    * [.getChannels([opts])](#CabalDetails+getChannels)
     * [.getCurrentChannel()](#CabalDetails+getCurrentChannel) ⇒ <code>string</code>
     * [.getCurrentChannelDetails()](#CabalDetails+getCurrentChannelDetails) ⇒ <code>ChannelDetails</code>
     * [.clearVirtualMessages([channel])](#CabalDetails+clearVirtualMessages)
@@ -514,6 +514,8 @@ Returns a string path of where all of the cabals are stored on the hard drive.
     * [.getLocalName()](#CabalDetails+getLocalName) ⇒ <code>string</code>
     * [.joinChannel(channel)](#CabalDetails+joinChannel)
     * [.leaveChannel(channel)](#CabalDetails+leaveChannel)
+    * [.archiveChannel(channel, [reason], cb(err))](#CabalDetails+archiveChannel)
+    * [.unarchiveChannel(channel, [reason], cb(err))](#CabalDetails+unarchiveChannel)
     * [.getUsers()](#CabalDetails+getUsers) ⇒ <code>object</code>
     * [._destroy()](#CabalDetails+_destroy)
     * ["update"](#CabalDetails+event_update)
@@ -532,6 +534,7 @@ Returns a string path of where all of the cabals are stored on the hard drive.
     * ["started-peering"](#CabalDetails+event_started-peering)
     * ["stopped-peering"](#CabalDetails+event_stopped-peering)
     * ["update"](#CabalDetails+event_update)
+    * ["info"](#CabalDetails+event_info)
 
 
 * * *
@@ -654,8 +657,17 @@ Add a status message, visible locally only.
 
 <a name="CabalDetails+getChannels"></a>
 
-### cabalDetails.getChannels() ⇒ <code>Array.&lt;string&gt;</code>
-**Returns**: <code>Array.&lt;string&gt;</code> - a list of all the channels in this cabal. Does not return channels with 0 members.  
+### cabalDetails.getChannels([opts])
+**Params**
+
+- *opts* <code>object</code>
+
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| includeArchived | <code>boolean</code> | Determines whether to include archived channels or not. Defaults to false. * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members. |
+
 
 * * *
 
@@ -730,6 +742,36 @@ that you have left the channel.
 **Params**
 
 - channel <code>string</code>
+
+
+* * *
+
+<a name="CabalDetails+archiveChannel"></a>
+
+### cabalDetails.archiveChannel(channel, [reason], cb(err))
+Archive a channel. Publishes a message announcing
+that you have archived the channel, applying it to the views of others who have you as a moderator/admin.
+
+**Params**
+
+- channel <code>string</code>
+- *reason* <code>string</code>
+- cb(err) <code>function</code> - callback invoked when the operation has finished, with error as its only parameter
+
+
+* * *
+
+<a name="CabalDetails+unarchiveChannel"></a>
+
+### cabalDetails.unarchiveChannel(channel, [reason], cb(err))
+Unarchive a channel. Publishes a message announcing
+that you have unarchived the channel.
+
+**Params**
+
+- channel <code>string</code>
+- *reason* <code>string</code>
+- cb(err) <code>function</code> - callback invoked when the operation has finished, with error as its only parameter
 
 
 * * *
@@ -1001,6 +1043,21 @@ Fires when the local user has disconnected with another peer
 Fires when any kind of change has happened to the cabal.
 
 **Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+
+* * *
+
+<a name="CabalDetails+event_info"></a>
+
+### "info"
+Fires when a valid slash-command (/<command>) emits output. See src/commands.js for all commands & their payloads.
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| command | <code>string</code> | The command that triggered the event & has emitted output |
+
 
 * * *
 
