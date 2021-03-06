@@ -7,6 +7,7 @@ const pump = require('pump')
 const Moderation = require('./moderation')
 const timestamp = require('monotonic-timestamp')
 const collect = require('collect-stream')
+const init = require('./initialization-callbacks')
 const { nextTick } = process
 
 /**
@@ -276,10 +277,17 @@ class CabalDetails extends EventEmitter {
   }
 
   /**
-   * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members.
+   * @param {object} [opts]
+   * @property {boolean} includeArchived - Determines whether to include archived channels or not. Defaults to false.
+   * * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members.
    */
-  getChannels () {
-    return Object.keys(this.channels).filter(ch => this.channels[ch].members.size > 0).sort()
+  getChannels (opts) {
+    if (!opts || typeof opts !== "object" || opts[Symbol.iterator]) { 
+      opts = { includeArchived: false } 
+    }
+    return Object.keys(this.channels)
+      .filter(ch => this.channels[ch].members.size > 0 && (opts.includeArchived || !this.channels[ch].archived))
+      .sort()
   }
 
   // returns a ChannelDetails object
@@ -406,6 +414,73 @@ class CabalDetails extends EventEmitter {
         cb(null)
       })
     }
+  }
+
+  /**
+   * Archive a channel. Publishes a message announcing
+   * that you have archived the channel, applying it to the views of others who have you as a moderator/admin.
+   * @param {string} channel
+   * @param {string} [reason]
+   * @param {function} cb(err) - callback invoked when the operation has finished, with error as its only parameter
+   */
+  archiveChannel (channel, reason = "", cb) {
+    if (!cb) cb = noop
+    const details = this.channels[channel]
+
+    if (channel === '!status') {
+      const err = new Error('cannot archive the !status channel')
+      debug(err)
+      return nextTick(cb, err)
+    }
+    if (!details) {
+      const err = new Error('cannot archive non-existent channel')
+      debug(err)
+      return nextTick(cb, err)
+    }
+    this.channels[channel].archive()
+    this.publishMessage({
+      type: 'channel/archive',
+      content: {
+        channel,
+        reason
+      }
+    }, {}, cb)
+  }
+
+  /**
+   * Unarchive a channel. Publishes a message announcing
+   * that you have unarchived the channel.
+   * @param {string} channel
+   * @param {string} [reason]
+   * @param {function} cb(err) - callback invoked when the operation has finished, with error as its only parameter
+   */
+  unarchiveChannel (channel, reason = "", cb) {
+    if (!cb) cb = noop
+    const details = this.channels[channel]
+
+    if (channel === '!status') {
+      const err = new Error('cannot unarchive the !status channel')
+      debug(err)
+      return nextTick(cb, err)
+    }
+    if (!details) {
+      const err = new Error('cannot unarchive non-existent channel')
+      debug(err)
+      return nextTick(cb, err)
+    }
+    this.channels[channel].unarchive()
+    this.publishMessage({
+      type: 'channel/unarchive',
+      content: {
+        channel,
+        reason
+      }
+    }, {}, cb)
+  }
+
+  isChannelArchived(channel) {
+    if (!this.channels[channel]) return false
+    return this.channels[channel].archived
   }
 
   /**
@@ -620,46 +695,86 @@ class CabalDetails extends EventEmitter {
 
   _initialize (done) {
     const cabal = this.core
-    // populate channels
-    cabal.channels.get((err, channels) => {
-      channels.forEach((channel) => {
-        const details = this.channels[channel]
-        if (!details) {
-          this.channels[channel] = new ChannelDetails(cabal, channel)
-        }
-        // listen for updates that happen within the channel
-        cabal.messages.events.on(channel, this.messageListener.bind(this))
+    let finished = 0
+    let asyncBlocks = 0
 
-        // add all users joined to a channel
-        cabal.memberships.getUsers(channel, (err, users) => {
-          users.forEach((u) => this.channels[channel].addMember(u))
-        })
+    this._finish = () => {
+      finished += 1
+      if (finished >= asyncBlocks) done()
+    }
 
-        // for each channel, get the topic
-        cabal.topics.get(channel, (err, topic) => {
-          this.channels[channel].topic = topic || ''
-        })
+    const invoke = (self, fn, cb) => {
+      asyncBlocks += 1
+      // the line below converts (as an example): 
+      //    invoke(cabal.archives, "get", init.getArchivesCallback)
+      // into: 
+      //    cabal.archives.get(getArchivesCallback)
+      // with proper `this` arguments for the respectively called functions
+      self[fn].bind(self)(cb.bind(this))
+    }
+
+    /* invoke one-time functions to populate & initialize the local state from data on disk */
+    invoke(cabal.archives, "get", init.getArchivesCallback)
+    invoke(cabal, "getLocalKey", init.getLocalKeyCallback)
+    invoke(cabal.users, "getAll", init.getAllUsersCallback)
+
+    /* register all the listeners we'll be using */
+    this.registerListener(cabal.users.events, 'update', (key) => {
+      cabal.users.get(key, (err, user) => {
+        if (err) return
+        this.users[key] = new User(Object.assign(this.users[key] || {}, user))
+        if (this.user && key === this.user.key) this.user = this.users[key]
+        this._emitUpdate('user-updated', { key, user })
       })
     })
 
-    cabal.getLocalKey((err, lkey) => {
-      cabal.memberships.getMemberships(lkey, (err, channels) => {
-        if (channels.length === 0) {
-          // make `default` the first channel if no saved state exists
-          this.joinChannel('default')
-        }
-        for (const channel of channels) {
-          // it's possible to be joined to a channel that `cabal.channels.get` doesn't return
-          // (it's an empty channel, with no messages)
-          const details = this.channels[channel]
-          if (!details) {
-            this.channels[channel] = new ChannelDetails(cabal, channel)
-            // listen for updates that happen within the channel
-            cabal.messages.events.on(channel, this.messageListener.bind(this))
-          }
-          this.channels[channel].joined = true
-        }
+    this.registerListener(cabal.topics.events, 'update', (msg) => {
+      var { channel, text } = msg.value.content
+      if (!this.channels[channel]) { this.channels[channel] = new ChannelDetails(this.core, channel) }
+      this.channels[channel].topic = text || ''
+      this._emitUpdate('topic', { channel, topic: text || '' })
+    })
+
+    this.registerListener(cabal, 'peer-added', (key) => {
+      if (this.users[key]) {
+        this.users[key].online = true
+      } else {
+        this.users[key] = new User({ key, online: true })
+      }
+      this._emitUpdate('started-peering', { key, name: this.users[key].name || key })
+    })
+
+    this.registerListener(cabal, 'peer-dropped', (key) => {
+      Object.keys(this.users).forEach((k) => {
+        if (k === key) {
+          this.users[k].online = false
+        } 
       })
+      this._emitUpdate('stopped-peering', { key, name: this.users[key].name || key })
+    })
+
+    // notify when a user has archived a channel
+    this.registerListener(cabal.archives.events, 'archive', (channel, reason, key) => {
+      const user = this.users[key]
+      const isLocal = key === this.user.key 
+      if (!isLocal && (!user || !user.canModerate())) { return }
+      if (!this.channels[channel]) {
+        this.channels[channel] = new ChannelDetails(this.core, channel)
+      }
+      this.channels[channel].archive()
+      this._emitUpdate('channel-archive', { channel, reason, key, isLocal })
+    })
+
+    // notify when a user has restored an archived channel
+    this.registerListener(cabal.archives.events, 'unarchive', (channel, reason, key) => {
+      const user = this.users[key]
+      const isLocal = key === this.user.key 
+      if (!isLocal && (!user || !user.canModerate())) { return }
+      if (!this.channels[channel]) {
+        this.channels[channel] = new ChannelDetails(this.core, channel)
+      }
+      this.channels[channel].unarchive()
+      this._emitUpdate('channel-unarchive', { channel, reason, key, isLocal })
     })
 
     // notify when a user has joined a channel
@@ -690,133 +805,6 @@ class CabalDetails extends EventEmitter {
       // Calls fn with every new message that arrives in channel.
       cabal.messages.events.on(channel, this.messageListener.bind(this))
       this._emitUpdate('new-channel', { channel })
-    })
-
-    // Load moderation state
-    const loadModerationState = (cb) => {
-      cabal.moderation.list((err, list) => {
-        if (err) return cb(err)
-        list.forEach(info => {
-          const user = this.users[info.id]
-          if (user) user.flags.set(info.channel, info.flags)
-        })
-        cb()
-      })
-    }
-
-    cabal.users.getAll((err, users) => {
-      if (err) return
-      this.users = new Map()
-      Object.keys(users).forEach(key => {
-        this.users[key] = new User(users[key])
-	  })
-	  this._initializeLocalUser(() => {
-        loadModerationState(() => {
-          this.registerListener(cabal.moderation.events, 'update', (info) => {
-            let user = this.users[info.id]
-            let changedRole = {}
-            if (!user) {
-              const flags = new Map()
-              flags.set(info.group, info.flags)
-              user = new User({ key: info.id, flags: flags })
-              this.users[info.id] = user
-            } else {
-              changedRole = { mod: user.isModerator(), admin: user.isAdmin(), hidden: user.isHidden() }
-              user.flags.set(info.group, info.flags)
-              changedRole.mod = changedRole.mod != user.isModerator()
-              changedRole.admin = changedRole.admin != user.isAdmin()
-              changedRole.hidden = changedRole.hidden != user.isHidden()
-            }
-            const issuer = this.users[info.by]
-            if (!issuer) return
-
-            this.core.getMessage(info.key, (err, doc) => {
-              const issuerName = issuer.name || info.by.slice(0, 8)
-              const role = doc.content.flags[0]
-              const reason = doc.content.reason || ''
-
-              // there was no change in behaviour, e.g. someone modded an already
-              // modded person, hid someone that was already hidden
-              const changeOccurred = Object.keys(changedRole).filter(r => changedRole[r]).length > 0
-              if (!changeOccurred) {
-                this._emitUpdate('user-updated', { key: info.id, user })
-                return
-              }
-              const type = doc.type.replace(/^flags\//, '')
-              let action, text
-              if (['admin', 'mod'].includes(role)) { action = (type === 'add' ? 'added' : 'removed') }
-              if (role === 'hide') { action = (type === 'add' ? 'hid' : 'unhid') }
-              if (role === 'hide') {
-                text = `${issuerName} ${action} ${user.name} ${reason}`
-              } else {
-                text = `${issuerName} ${action} ${user.name} as ${role} ${reason}`
-              }
-              const obj = { issuer: info.by, receiver: info.id, role, type, reason }
-              this._emitUpdate('user-updated', { key: info.id, user })
-
-              const msg = {
-                key: '!status',
-                value: {
-                  timestamp: timestamp(),
-                  type: 'chat/moderation',
-                  content: {
-                    text,
-                    issuerid: info.by,
-                    receiverid: info.id,
-                    role,
-                    type,
-                    reason
-                  }
-                }
-              }
-
-              // add to !status channel, to have a canonical log of all moderation actions in one place
-              this.addStatusMessage(msg, '!status')
-
-              // also add to the currently focused channel, so that the moderation action isn't missed
-              if (this.chname !== '!status') {
-                this.addStatusMessage(msg)
-              }
-            })
-          })
-
-          done()
-        })
-      })
-
-      this.registerListener(cabal.users.events, 'update', (key) => {
-        cabal.users.get(key, (err, user) => {
-          if (err) return
-          this.users[key] = new User(Object.assign(this.users[key] || {}, user))
-          if (this.user && key === this.user.key) this.user = this.users[key]
-          this._emitUpdate('user-updated', { key, user })
-        })
-      })
-
-      this.registerListener(cabal.topics.events, 'update', (msg) => {
-        var { channel, text } = msg.value.content
-        if (!this.channels[channel]) { this.channels[channel] = new ChannelDetails(this.core, channel) }
-        this.channels[channel].topic = text || ''
-        this._emitUpdate('topic', { channel, topic: text || '' })
-      })
-
-      this.registerListener(cabal, 'peer-added', (key) => {
-        if (this.users[key]) {
-          this.users[key].online = true
-        } else {
-          this.users[key] = new User({ key, online: true })
-        }
-        this._emitUpdate('started-peering', { key, name: this.users[key].name || key })
-      })
-
-      this.registerListener(cabal, 'peer-dropped', (key) => {
-        Object.keys(this.users).forEach((k) => {
-          if (k === key) {
-            this.users[k].online = false
-          }
-        })
-        this._emitUpdate('stopped-peering', { key, name: this.users[key].name || key })
-      })
     })
   }
 }

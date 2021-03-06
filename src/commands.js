@@ -22,6 +22,84 @@ module.exports = {
       }
     }
   },
+  archive: {
+    help: () => 'archive a channel',
+    category: ["channels"],
+    call: (cabal, res, arg) => {
+      if (typeof arg === "undefined" || arg.length <= 0) {
+        return res.error("you need to specify the channel to archive")
+      }
+
+      // if no --channel: assume everything up to the first opt is the reason
+      const defaultChannel = arg.indexOf("--") >= 0 ? arg.slice(0, arg.indexOf("--")).trim() : arg
+      let { channel, reason } = extractChannelReasonOptions(arg, defaultChannel)
+
+      if (typeof cabal.channels[channel] === "undefined") {
+        return res.error(`${arg} does not exist`)
+      } else if (channel === "!status") {
+        return res.error("the !status channel cannot be archived")
+      } else if (cabal.isChannelArchived(channel)) {
+        return res.error(`channel ${channel} is already archived`)
+      }
+
+      res.info(`archived ${channel}`)
+      cabal.archiveChannel(channel, reason, (err) => {
+        if (err) res.error(err)
+        else res.end()
+      })
+    }
+  },
+  unarchive: {
+    help: () => 'unarchive a channel',
+    category: ["channels"],
+    alias: ['restore'],
+    call: (cabal, res, arg) => {
+      if (typeof arg === "undefined" || arg.length <= 0) {
+        return res.error("you need to specify the channel to unarchive")
+      } 
+
+      // if no --channel: assume everything up to the first opt is the reason
+      const defaultChannel = arg.indexOf("--") >= 0 ? arg.slice(0, arg.indexOf("--")).trim() : arg
+      let { channel, reason } = extractChannelReasonOptions(arg, defaultChannel)
+      
+      if (typeof cabal.channels[channel] === "undefined") {
+        return res.error(`${channel} does not exist`)
+      } else if (channel === "!status") {
+        return res.error("the !status channel cannot be archived (and so neither unarchived)")
+      } else if (!cabal.isChannelArchived(channel)) {
+        return res.error(`channel ${channel} is not archived`)
+      }
+
+      res.info(`restored ${channel}`)
+      cabal.unarchiveChannel(channel, reason, (err) => {
+        if (err) res.error(err)
+        else res.end()
+      })
+    }
+  },
+  archives: {
+    help: () => 'list the currently archived channels',
+    category: ["channels"],
+    alias: ["archived"],
+    call: (cabal, res, arg) => {
+      const archivedChannels = cabal.getChannels({ includeArchived: true }).filter(ch => cabal.channels[ch].archived)
+
+      res.info("all archived channels:")
+      archivedChannels.forEach(channel => res.info(`  ${channel}`, { channel }))
+      if (archivedChannels.length === 0) {
+        res.info("no channels are archived")
+      }
+
+      cabal.core.archives.getUnarchived(cabal.user.key, (err, unarchivedChannels) => {
+        res.info("channels you have restored:")
+        unarchivedChannels.forEach(channel => res.info(`  ${channel}`, { channel }))
+        if (unarchivedChannels.length === 0) {
+          res.info("there are no restored channels. restore an archived channel with /unarchive <channel name>")
+        }
+        res.end()
+      })
+    }
+  },
   whisper: {
     help: () => 'create a whisper link, a shortlived shortname alias for this cabal\'s key',
     category: ["sharing"],
@@ -334,6 +412,7 @@ module.exports = {
       res.info('moderation commands')
       res.info('\nbasic actions. the basic actions will be published to your log')
       res.info('USAGE /<cmd> NICK{.PUBKEY} {REASON...}')
+      res.info('      /<cmd> NICK{.PUBKEY} --channel <channel name> --reason <reason>')
       baseCmds.forEach((base) => {
         res.info(`/${base}: ${module.exports[base].help()}`)
         const reverse = `un${base}`
@@ -681,6 +760,30 @@ function getPeerName (details, key) {
   return key
 }
 
+function parseOptions (input) {
+  const output = {}
+  const options = input.slice(input.indexOf("--")).split(/(\s+|^)--/).map(s => s.trim()).filter(s => s !== "")
+  options.forEach(option => {
+    const i = option.indexOf(" ")
+    const optionType = option.slice(0, i)
+    output[optionType] = option.slice(i).trim()
+  })
+  return output
+}
+
+// extract --<option>. the currently implemented options are: --reason <reason>, --channel <channel>
+// option order does not matter: --reason foo --channel bar and --channel bar --reason foo are equivalent
+function extractChannelReasonOptions (input, defaultChannel, defaultReason = '') {
+  let channel = defaultChannel
+  let reason = defaultReason
+  if (input.indexOf("--") >= 0) {
+    const options = parseOptions(input)
+    channel = options["channel"] || channel
+    reason = options["reason"] || reason
+  }
+  return { channel, reason }
+}
+
 function cmpUser (a, b) {
   if (a.online && !b.online) return -1
   if (b.online && !a.online) return 1
@@ -696,7 +799,6 @@ function flagCmd (cmd, cabal, res, arg) {
     res.info(`usage: /${cmd} NICK{.PUBKEY} {REASON...}`)
     return res.end()
   }
-  let channel = '@'
   var id = args[0]
   var keys = parseNameToKeys(cabal, id)
   if (keys.length === 0) {
@@ -713,32 +815,16 @@ function flagCmd (cmd, cabal, res, arg) {
   id = keys[0]
   var type = /^un/.test(cmd) ? 'remove' : 'add'
   var flag = cmd.replace(/^un/, '')
-  let options = args.slice(1).join(' ')
-  let reason
-  
-  // if no --<option> flags are found, assume the rest of the input is contains the reason
-  if (options.indexOf("--") < 0) { 
-    reason = options 
-  } else {
-    // extract --<option>. the currently implemented options are: --reason <reason>, --channel <channel>
-    // option order does not matter: --reason foo --channel bar and --channel bar --reason foo are equivalent
-    options = options.trim().split(/(\s+|^)--/).map(s => s.trim()).filter(s => s !== "")
-    options.forEach(option => {
-      const i = option.indexOf(" ")
-      const optionType = option.slice(0, i)
-      if (optionType === "reason") {
-        reason = option.slice(i).trim()
-      } else if (optionType === "channel") {
-        channel = option.slice(i).trim()
-        if (typeof cabal.channels[channel] === "undefined") {
-          return res.error(`channel ${channel} does not exist`)
-        }
-      }
-    })
+  let options = args.slice(1).join(' ') // if no --<option> flags are found, assume `options` only contains the reason
+
+  let { channel, reason } = extractChannelReasonOptions(options, "@", options) // if --channel option missin: assume default channel is '@' 
+
+  if (channel !== "@" && typeof cabal.channels[channel] === "undefined") {
+    return res.error(`channel ${channel} does not exist`)
   }
 
   const peerName = getPeerName(cabal, id)
-  const placeModifier = channel === "@" ? "for the entire cabal" : `in channel ${channel}`
+  const placeModifier = channel === '@' ? 'for the entire cabal' : `in channel ${channel}`
   if (['admin', 'mod'].includes(flag)) {
     if (/^un/.test(cmd) && flag === 'mod' && !cabal.users[id].isModerator(channel)) {
       return res.error(`${peerName} is not a mod ${placeModifier}`)
@@ -762,7 +848,19 @@ function flagCmd (cmd, cabal, res, arg) {
   }
 
   cabal.moderation.setFlag(flag, type, channel, id, reason).then(() => {
-    res.end()
+    // we added a new mod => process archived channels
+    if (['mod', 'admin'].indexOf(flag) >= 0) {
+      // set currently archived status according to current mods
+      cabal.core.archives.get((err, archivedChannels) => {
+        cabal.getChannels({ includeArchived: true }).forEach(ch => cabal.channels[ch].unarchive()) // reset archive status
+        archivedChannels.forEach(ch => {
+          if (cabal.channels[ch]) { cabal.channels[ch].archive() }
+        })
+        res.end()
+      })
+    } else {
+      res.end()
+    }
   }).catch((err) => { res.error(err) })
 }
 

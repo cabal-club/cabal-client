@@ -25,6 +25,11 @@ class User {
     const all = this.flags.get('@')
     return (chan && chan.includes('mod')) || (all && all.includes('mod'))
   }
+
+  canModerate(channel) {
+    return this.isAdmin(channel) || this.isModerator(channel)
+  }
+
 }
 
 module.exports = User
