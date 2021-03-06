@@ -1,3 +1,4 @@
+const timestamp = require('monotonic-timestamp')
 const { ChannelDetails } = require('./channel-details')
 const User = require('./user')
 /* this file contains callbacks used for populating the initial state. these are all invoked inside
