@@ -5,6 +5,7 @@ const crypto = require('hypercore-crypto')
 const DatDns = require('dat-dns')
 const ram = require('random-access-memory')
 const memdb = require('memdb')
+const polyraf = require("polyraf")
 const level = require('level')
 const path = require('path')
 const mkdirp = require('mkdirp')
@@ -181,7 +182,7 @@ class Client {
         let { temp, dbdir, preferredPort } = this.config
         preferredPort = preferredPort || 0 
         dbdir = dbdir || path.join(Client.getCabalDirectory(), 'archives')
-        const storage = temp ? ram : path.join(dbdir, scrubbedKey)
+        const storage = temp ? ram : polyraf(path.join(dbdir, scrubbedKey))
         if (!temp) try { mkdirp.sync(path.join(dbdir, scrubbedKey, 'views')) } catch (e) {}
         var db = temp ? memdb() : level(path.join(dbdir, scrubbedKey, 'views'))
 

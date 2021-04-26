@@ -9,10 +9,14 @@
   "homepage": "https://github.com/cabal-club/cabal-client",
   "bugs": "https://github.com/cabal-club/cabal-client/issues",
   "main": "index.js",
+  "browser": {
+    "mkdirp": false
+  },
   "scripts": {
     "test": "tape test/*.js",
     "lint": "standard",
-    "doc": "jsdoc2md --files src/client.js src/cabal-details.js --param-list-format list --separators --partial doc-gen/scope.hbs --helper doc-gen/helpers.js > api.md"
+    "doc": "jsdoc2md --files src/client.js src/cabal-details.js --param-list-format list --separators --partial doc-gen/scope.hbs --helper doc-gen/helpers.js > api.md",
+    "build": "browserify boop.js > bundle.js"
   },
   "keywords": [],
   "dependencies": {
@@ -25,7 +29,8 @@
     "memdb": "^1.3.1",
     "mkdirp": "^1.0.4",
     "monotonic-timestamp": "0.0.9",
-    "paperslip": "^3.0.0",
+    "paperslip": "^3.1.0",
+    "polyraf": "^1.1.0",
     "pump": "^3.0.0",
     "qrcode": "^1.4.4",
     "random-access-memory": "^3.1.1",
