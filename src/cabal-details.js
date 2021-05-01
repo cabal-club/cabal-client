@@ -800,10 +800,9 @@ class CabalDetails extends EventEmitter {
       const details = this.channels[channel]
       if (!details) {
         this.channels[channel] = new ChannelDetails(cabal, channel)
+        // note: only add listener if we don't have a channel registered (=> prevent duplicate listeners)
+        cabal.messages.events.on(channel, this.messageListener.bind(this))
       }
-      // TODO: only do this for our joined channels, instead of all channels
-      // Calls fn with every new message that arrives in channel.
-      cabal.messages.events.on(channel, this.messageListener.bind(this))
       this._emitUpdate('new-channel', { channel })
     })
   }
