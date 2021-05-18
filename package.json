@@ -20,7 +20,7 @@
   },
   "keywords": [],
   "dependencies": {
-    "cabal-core": "^13.2.0",
+    "cabal-core": "^14.0.0",
     "collect-stream": "^1.2.1",
     "dat-dns": "^4.1.2",
     "debug": "^4.1.1",
