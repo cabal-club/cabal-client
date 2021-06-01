@@ -145,9 +145,10 @@ class Client {
    * Create a new cabal.
    * @returns {Promise} a promise that resolves into a `CabalDetails` instance.
    */
-  createCabal (cb) {
+  createCabal (cb, opts) {
+    opts = opts || {}
     const key = Client.generateKey()
-    return this.addCabal(key, cb)
+    return this.addCabal(key, opts, cb)
   }
 
   /**
