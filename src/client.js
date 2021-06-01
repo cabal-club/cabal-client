@@ -217,7 +217,8 @@ class Client {
             aliases: this.aliases
           }, done)
           this.cabals.set(cabal, details)
-          if (!opts.noSwarm) cabal.swarm()
+          opts.swarm = opts.swarm || {}
+          if (!opts.noSwarm) cabal.swarm(opts.swarm)
           function done () {
             details._emitUpdate('init')
             cb()
