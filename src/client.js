@@ -133,6 +133,9 @@ class Client {
             stream.once('error', (err) => { reject(err) })
         })
     } else {
+        if (Cabal.isHypercoreKey(Client.scrubKey(name))) {
+          return Promise.resolve(name)
+        }
         return this.cabalDns.resolveName(name).then((key) => {
           if (key === null) return null
           if (!cb) return key
@@ -175,11 +178,13 @@ class Client {
       cabalPromise = this.resolveName(key.trim()).then((resolvedKey) => {
         // discard uri scheme and search params of cabal key, if present. returns 64 chr hex string
         const scrubbedKey = Client.scrubKey(resolvedKey)
-        // TODO: export cabal-core's isHypercoreKey() and use here & verify that scrubbedKey is 64 ch hex string
-        if (resolvedKey === null) {
+
+        //  verify that scrubbedKey is 64 ch hex string
+        if (resolvedKey === null || !Cabal.isHypercoreKey(scrubbedKey)) {
           dnsFailed = true
           return
         }
+
         let { temp, dbdir, preferredPort } = this.config
         preferredPort = preferredPort || 0 
         dbdir = dbdir || path.join(Client.getCabalDirectory(), 'archives')
