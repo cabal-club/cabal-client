@@ -10,7 +10,8 @@
   "bugs": "https://github.com/cabal-club/cabal-client/issues",
   "main": "index.js",
   "browser": {
-    "mkdirp": false
+    "mkdirp": false,
+    "random-access-file": "random-access-web"
   },
   "scripts": {
     "test": "tape test/*.js",
@@ -29,8 +30,8 @@
     "memdb": "^1.3.1",
     "mkdirp": "^1.0.4",
     "monotonic-timestamp": "0.0.9",
+    "random-access-file": "^2.2.0",
     "paperslip": "^3.1.0",
-    "polyraf": "^1.1.0",
     "pump": "^3.0.0",
     "qrcode": "^1.4.4",
     "random-access-memory": "^3.1.1",

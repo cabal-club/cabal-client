@@ -5,10 +5,10 @@ const crypto = require('hypercore-crypto')
 const DatDns = require('dat-dns')
 const ram = require('random-access-memory')
 const memdb = require('memdb')
-const polyraf = require("polyraf")
 const level = require('level')
 const path = require('path')
 const mkdirp = require('mkdirp')
+const raf = require("random-access-file") // note! raf is replaced with random-access-web if cabal-client is browserified
 const os = require('os')
 const defaultCommands = require('./commands')
 const paperslip = require("paperslip")
@@ -35,6 +35,8 @@ class Client {
         config: {
           temp: true,
           dbdir: null,
+          storage: null,
+          swarm: null, // typically null or passed hyperswarm-web options
           preferredPort: 0  // use cabal-core's default port
         }
       }
@@ -185,10 +187,11 @@ class Client {
           return
         }
 
-        let { temp, dbdir, preferredPort } = this.config
+        let { temp, dbdir, preferredPort, storage } = this.config
         preferredPort = preferredPort || 0 
         dbdir = dbdir || path.join(Client.getCabalDirectory(), 'archives')
-        const storage = temp ? ram : polyraf(path.join(dbdir, scrubbedKey))
+        // if opts.config.storage passed in, use it. otherwise use decent defaults
+        storage = storage || temp ? ram : raf(path.join(dbdir, scrubbedKey))
         if (!temp) try { mkdirp.sync(path.join(dbdir, scrubbedKey, 'views')) } catch (e) {}
         var db = temp ? memdb() : level(path.join(dbdir, scrubbedKey, 'views'))
 
@@ -223,8 +226,7 @@ class Client {
             aliases: this.aliases
           }, done)
           this.cabals.set(cabal, details)
-          opts.swarm = opts.swarm || {}
-          if (!opts.noSwarm) cabal.swarm(opts.swarm)
+          if (!opts.noSwarm) cabal.swarm(this.config.swarm)
           function done () {
             details._emitUpdate('init')
             cb()
