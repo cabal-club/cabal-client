@@ -1,5 +1,5 @@
-
 # cabal-client
+
 `cabal-client` is a new type of client library for cabal chat clients.
 
 New chat clients can be implemented using _only_ this library, without having
@@ -7,16 +7,18 @@ to mess around with [`cabal-core`](https://github.com/cabal-club/cabal-core/)
 anymore.
 
 Some of its features:
-* consolidates logic common to all chat clients
-* leaving and joining of channels
-* virtual messages (such as status messages) and virtual channels (currently only the `!status` channel)
-* handling multiple cabal instances
-* receiving unread notifications and mentions for channels
-* resolving of DNS shortnames (cabal.chat) to cabal keys
+
+- consolidates logic common to all chat clients
+- leaving and joining of channels
+- virtual messages (such as status messages) and virtual channels (currently only the `!status` channel)
+- handling multiple cabal instances
+- receiving unread notifications and mentions for channels
+- resolving of DNS shortnames (cabal.chat) to cabal keys
 
 For a couple of brief examples, see the [`examples/`](examples/) directory.
 
 ## Usage
+
 See [`cabal-cli`](https://github.com/cabal-club/cabal-cli/) for an example client implementation.
 
 [Read the API documentation](./api.md)
