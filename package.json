@@ -12,7 +12,11 @@
   "scripts": {
     "test": "tape test/*.js",
     "lint": "standard",
-    "doc": "jsdoc2md --files src/client.js src/cabal-details.js --param-list-format list --separators --partial doc-gen/scope.hbs --helper doc-gen/helpers.js > api.md"
+    "doc": "jsdoc2md --files src/client.js src/cabal-details.js --param-list-format list --separators --partial doc-gen/scope.hbs --helper doc-gen/helpers.js > api.md",
+    "changelog:patch": "hallmark bump patch",
+    "changelog:minor": "hallmark bump minor",
+    "changelog:major": "hallmark bump major",
+    "markdown:fix": "hallmark --fix"
   },
   "keywords": [],
   "dependencies": {
@@ -33,6 +37,7 @@
     "to2": "^1.0.0"
   },
   "devDependencies": {
+    "hallmark": "^3.1.0",
     "jsdoc-to-markdown": "^5.0.2",
     "rimraf": "^3.0.2",
     "standard": "~12.0.0",
