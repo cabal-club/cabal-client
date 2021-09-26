@@ -1,6 +1,6 @@
 # Changelog
 
-## [7.0.0] - 2021-09-25
+## [7.0.0] - 2021-09-26
 
 _The updated version of `cabal-core` indirectly contains major changes to the underlying protocol. See the release of [`cabal-core@14.0.0`](https://github.com/cabal-club/cabal-core/blob/master/CHANGELOG.md#1400---2021-05-18) for more detailed information._
 
