@@ -61,6 +61,12 @@ Create a client instance from which to manage multiple
 **Params**
 
 - *opts* <code>object</code>
+    - aliases <code>object</code> - key/value pairs of `alias` -> `command name`
+    - commands <code>object</code> - key/value pairs of `command name` -> `command object`, which has the following properties:
+        - call <code>function</code> - command function with the following signature `command.call(cabal, res, arg)`
+        - help <code>function</code> - return the help string for this command
+        - category <code>Array.&lt;string&gt;</code> - a list of categories this commands belongs to
+        - alias <code>Array.&lt;string&gt;</code> - a list of command aliases
     - config <code>object</code>
         - temp <code>boolean</code> - if `temp` is true no data is persisted to disk.
         - *dbdir* <code>string</code> - the directory to store the cabal data
