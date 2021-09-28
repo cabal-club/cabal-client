@@ -18,6 +18,12 @@ class Client {
    * [`cabal-core`](https://github.com/cabal-club/cabal-core/) instances.
    * @constructor
    * @param {object} [opts]
+   * @param {object} opts.aliases key/value pairs of `alias` -> `command name`
+   * @param {object} opts.commands key/value pairs of `command name` -> `command object`, which has the following properties:
+   * @param {function} opts.commands[].call command function with the following signature `command.call(cabal, res, arg)`
+   * @param {function} opts.commands[].help return the help string for this command
+   * @param {string[]} opts.commands[].category a list of categories this commands belongs to
+   * @param {string[]} opts.commands[].alias a list of command aliases
    * @param {object} opts.config
    * @param {boolean} opts.config.temp if `temp` is true no data is persisted to disk.
    * @param {string} [opts.config.dbdir] the directory to store the cabal data
