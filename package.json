@@ -17,7 +17,7 @@
     "test": "tape test/*.js",
     "lint": "standard",
     "doc": "jsdoc2md --files src/client.js src/cabal-details.js --param-list-format list --separators --partial doc-gen/scope.hbs --helper doc-gen/helpers.js > api.md",
-    "build": "browserify boop.js > bundle.js"
+    "build": "browserify index.js --standalone CabalClient > bundle.js"
   },
   "keywords": [],
   "dependencies": {
@@ -35,10 +35,12 @@
     "qrcode": "^1.4.4",
     "random-access-file": "^2.2.0",
     "random-access-memory": "^3.1.1",
+    "random-access-web": "^2.0.3",
     "strftime": "^0.10.0",
     "to2": "^1.0.0"
   },
   "devDependencies": {
+    "browserify": "^17.0.0",
     "jsdoc-to-markdown": "^5.0.2",
     "rimraf": "^3.0.2",
     "standard": "~12.0.0",
