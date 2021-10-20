@@ -11,7 +11,7 @@
   "main": "index.js",
   "browser": {
     "mkdirp": false,
-    "random-access-file": "random-access-web"
+    "./src/storage-node.js": "./src/storage-browser.js"
   },
   "scripts": {
     "test": "tape test/*.js",
@@ -33,7 +33,6 @@
     "paperslip": "^3.1.0",
     "pump": "^3.0.0",
     "qrcode": "^1.4.4",
-    "random-access-file": "^2.2.0",
     "random-access-memory": "^3.1.1",
     "random-access-web": "^2.0.3",
     "strftime": "^0.10.0",

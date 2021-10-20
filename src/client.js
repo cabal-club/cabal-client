@@ -8,10 +8,10 @@ const memdb = require('memdb')
 const level = require('level')
 const path = require('path')
 const mkdirp = require('mkdirp')
-const raf = require("random-access-file") // note! raf is replaced with random-access-web if cabal-client is browserified
 const os = require('os')
 const defaultCommands = require('./commands')
 const paperslip = require("paperslip")
+const getStorage = require("./storage-node") // replaced with `storage-browser.js` if browserified
 
 class Client {
   /**
@@ -191,7 +191,7 @@ class Client {
         preferredPort = preferredPort || 0 
         dbdir = dbdir || path.join(Client.getCabalDirectory(), 'archives')
         // if opts.config.storage passed in, use it. otherwise use decent defaults
-        storage = storage || temp ? ram : raf(path.join(dbdir, scrubbedKey))
+        storage = storage || temp ? ram : getStorage(path.join(dbdir, scrubbedKey))
         if (!temp) try { mkdirp.sync(path.join(dbdir, scrubbedKey, 'views')) } catch (e) {}
         var db = temp ? memdb() : level(path.join(dbdir, scrubbedKey, 'views'))
 
