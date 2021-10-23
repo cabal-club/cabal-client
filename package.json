@@ -9,10 +9,15 @@
   "homepage": "https://github.com/cabal-club/cabal-client",
   "bugs": "https://github.com/cabal-club/cabal-client/issues",
   "main": "index.js",
+  "browser": {
+    "mkdirp": false,
+    "./src/storage-node.js": "./src/storage-browser.js"
+  },
   "scripts": {
     "test": "tape test/*.js",
     "lint": "standard",
     "doc": "jsdoc2md --files src/client.js src/cabal-details.js --param-list-format list --separators --partial doc-gen/scope.hbs --helper doc-gen/helpers.js > api.md",
+    "build": "browserify index.js --standalone CabalClient > bundle.js",
     "changelog:patch": "hallmark bump patch -i api.md",
     "changelog:minor": "hallmark bump minor -i api.md",
     "changelog:major": "hallmark bump major -i api.md",
@@ -20,7 +25,7 @@
   },
   "keywords": [],
   "dependencies": {
-    "cabal-core": "^14.1.1",
+    "cabal-core": "^14.1.2",
     "collect-stream": "^1.2.1",
     "dat-dns": "^4.1.2",
     "debug": "^4.1.1",
@@ -29,14 +34,16 @@
     "memdb": "^1.3.1",
     "mkdirp": "^1.0.4",
     "monotonic-timestamp": "0.0.9",
-    "paperslip": "^3.0.0",
+    "paperslip": "^3.1.0",
     "pump": "^3.0.0",
     "qrcode": "^1.4.4",
     "random-access-memory": "^3.1.1",
+    "random-access-web": "^2.0.3",
     "strftime": "^0.10.0",
     "to2": "^1.0.0"
   },
   "devDependencies": {
+    "browserify": "^17.0.0",
     "hallmark": "^3.1.0",
     "jsdoc-to-markdown": "^5.0.2",
     "rimraf": "^3.0.2",

@@ -11,6 +11,7 @@ const mkdirp = require('mkdirp')
 const os = require('os')
 const defaultCommands = require('./commands')
 const paperslip = require("paperslip")
+const getStorage = require("./storage-node") // replaced with `storage-browser.js` if browserified
 
 class Client {
   /**
@@ -40,6 +41,8 @@ class Client {
         config: {
           temp: true,
           dbdir: null,
+          storage: null,
+          swarm: null, // typically null or passed hyperswarm-web options
           preferredPort: 0  // use cabal-core's default port
         }
       }
@@ -138,6 +141,9 @@ class Client {
             stream.once('error', (err) => { reject(err) })
         })
     } else {
+        if (Cabal.isHypercoreKey(Client.scrubKey(name))) {
+          return Promise.resolve(name)
+        }
         return this.cabalDns.resolveName(name).then((key) => {
           if (key === null) return null
           if (!cb) return key
@@ -150,9 +156,10 @@ class Client {
    * Create a new cabal.
    * @returns {Promise} a promise that resolves into a `CabalDetails` instance.
    */
-  createCabal (cb) {
+  createCabal (cb, opts) {
+    opts = opts || {}
     const key = Client.generateKey()
-    return this.addCabal(key, cb)
+    return this.addCabal(key, opts, cb)
   }
 
   /**
@@ -179,15 +186,18 @@ class Client {
       cabalPromise = this.resolveName(key.trim()).then((resolvedKey) => {
         // discard uri scheme and search params of cabal key, if present. returns 64 chr hex string
         const scrubbedKey = Client.scrubKey(resolvedKey)
-        // TODO: export cabal-core's isHypercoreKey() and use here & verify that scrubbedKey is 64 ch hex string
-        if (resolvedKey === null) {
+
+        //  verify that scrubbedKey is 64 ch hex string
+        if (resolvedKey === null || !Cabal.isHypercoreKey(scrubbedKey)) {
           dnsFailed = true
           return
         }
-        let { temp, dbdir, preferredPort } = this.config
+
+        let { temp, dbdir, preferredPort, storage } = this.config
         preferredPort = preferredPort || 0 
         dbdir = dbdir || path.join(Client.getCabalDirectory(), 'archives')
-        const storage = temp ? ram : path.join(dbdir, scrubbedKey)
+        // if opts.config.storage passed in, use it. otherwise use decent defaults
+        storage = storage || temp ? ram : getStorage(path.join(dbdir, scrubbedKey))
         if (!temp) try { mkdirp.sync(path.join(dbdir, scrubbedKey, 'views')) } catch (e) {}
         var db = temp ? memdb() : level(path.join(dbdir, scrubbedKey, 'views'))
 
@@ -222,7 +232,7 @@ class Client {
             aliases: this.aliases
           }, done)
           this.cabals.set(cabal, details)
-          if (!opts.noSwarm) cabal.swarm()
+          if (!opts.noSwarm) cabal.swarm(this.config.swarm)
           function done () {
             details._emitUpdate('init')
             cb()
