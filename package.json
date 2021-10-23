@@ -21,7 +21,7 @@
     "changelog:patch": "hallmark bump patch -i api.md",
     "changelog:minor": "hallmark bump minor -i api.md",
     "changelog:major": "hallmark bump major -i api.md",
-    "markdown:fix": "hallmark --fix README.md CHANGELOG.md"
+    "changelog:fix": "hallmark --fix README.md CHANGELOG.md"
   },
   "keywords": [],
   "dependencies": {
