@@ -2,7 +2,7 @@
   "name": "cabal-client",
   "description": "helper module for cabal clients",
   "author": "Cabal Club",
-  "version": "6.3.1",
+  "version": "7.0.0",
   "repository": {
     "url": "git://github.com/cabal-club/cabal-client.git"
   },
@@ -17,7 +17,11 @@
     "test": "tape test/*.js",
     "lint": "standard",
     "doc": "jsdoc2md --files src/client.js src/cabal-details.js --param-list-format list --separators --partial doc-gen/scope.hbs --helper doc-gen/helpers.js > api.md",
-    "build": "browserify index.js --standalone CabalClient > bundle.js"
+    "build": "browserify index.js --standalone CabalClient > bundle.js",
+    "changelog:patch": "hallmark bump patch -i api.md",
+    "changelog:minor": "hallmark bump minor -i api.md",
+    "changelog:major": "hallmark bump major -i api.md",
+    "markdown:fix": "hallmark --fix README.md CHANGELOG.md"
   },
   "keywords": [],
   "dependencies": {
@@ -40,6 +44,7 @@
   },
   "devDependencies": {
     "browserify": "^17.0.0",
+    "hallmark": "^3.1.0",
     "jsdoc-to-markdown": "^5.0.2",
     "rimraf": "^3.0.2",
     "standard": "~12.0.0",
