@@ -71,7 +71,9 @@ $ npm install cabal-client
 ```
 
 ## Developing
+
 ### Changelog
+
 See the instructions for generating the changelog in the [cabal-core readme](https://github.com/cabal-club/cabal-core/#developing).
 
 ## License
