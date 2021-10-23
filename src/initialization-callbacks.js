@@ -14,14 +14,13 @@ module.exports.getArchivesCallback = function (err, archivedChannels) {
       const details = this.channels[channel]
       if (!details) {
         this.channels[channel] = new ChannelDetails(cabal, channel)
-        // listen for updates that happen within the channel
-        // note: only add listener if we don't have a channel registered (=> prevent duplicate listeners)
-        cabal.messages.events.on(channel, this.messageListener.bind(this))
       }
       // mark archived channels as such
       if (archivedChannels.indexOf(channel) >= 0) {
         this.channels[channel].archive()
       }
+      // listen for updates that happen within the channel
+      cabal.messages.events.on(channel, this.messageListener.bind(this))
 
       // add all users joined to a channel
       cabal.memberships.getUsers(channel, (err, users) => {
