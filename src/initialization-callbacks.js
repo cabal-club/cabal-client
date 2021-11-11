@@ -1,4 +1,5 @@
 const timestamp = require('monotonic-timestamp')
+const Cabal = require("cabal-core")
 const { ChannelDetails, PMChannelDetails } = require('./channel-details')
 const User = require('./user')
 
@@ -11,10 +12,9 @@ module.exports.getArchivesCallback = function (err, archivedChannels) {
   const cabal = this.core
   // populate channels
   cabal.channels.get((err, channels) => {
-    // TODO (2021-11-01): figure out why the cabal-core api cabal.channels returns private channels
     channels.forEach((channel) => {
       const details = this.channels[channel]
-      if (!details) {
+      if (!details && !Cabal.isHypercoreKey(channel)) {
         this.channels[channel] = new ChannelDetails(cabal, channel)
       }
       // mark archived channels as such
@@ -42,22 +42,19 @@ module.exports.getArchivesCallback = function (err, archivedChannels) {
 
 module.exports.getOpenedPMs = function (err, privates) {
   const cabal = this.core
+  // handle all incoming private messages
+  cabal.privateMessages.events.on("message", (pubkey, message) => { 
+    // if pubkey is hidden, do not handle or display the private message
+    if (this.users[pubkey].isHidden()) { return }
+    this.messageListener(message) 
+  })
   // populate private message channels
   privates.forEach((pubkey) => {
     const details = this.channels[pubkey]
     if (!details) {
       this.channels[pubkey] = new PMChannelDetails(cabal, pubkey)
     }
-
-    // transform messages emitted from the privateMessages api
-    // so that we can handle them in cabal-details:messageListener
-    cabal.privateMessages.events.on(pubkey, (msg) => {
-			const clonedMsg = {...msg}
-      clonedMsg.value.content.channel = pubkey
-      this.messageListener(clonedMsg)
-    })
   })
-
   this._finish()
 }
 

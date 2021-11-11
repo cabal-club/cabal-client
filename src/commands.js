@@ -49,7 +49,14 @@ module.exports = {
       }
       id = keys[0]
       const text = args.slice(1).join(" ")
-      cabal.publishPrivateMessage(text, id)
+      const msg = { 
+        type: "chat/text",
+        content: {
+          text,
+          channel: id
+        }
+      }
+      cabal.publishPrivateMessage(msg, id)
     }
   },
   archive: {

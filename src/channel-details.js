@@ -226,10 +226,6 @@ class PMChannelDetails extends ChannelDetails {
   toString () {
     return `PM-${this.recipient.slice(0,8)}`
   }
-  
-  getRecipient () {
-    return this.recipient
-  }
 }
 
 module.exports = { ChannelDetails, VirtualChannelDetails, PMChannelDetails }
