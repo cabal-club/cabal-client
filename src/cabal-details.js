@@ -249,7 +249,8 @@ class CabalDetails extends EventEmitter {
     if (!cb) { cb = noop }
     // make sure we don't publish topic messages for PMs
     if (this.channels[channel] && this.channels[channel].isPrivate) {
-      return nextTick(cb, null)
+      // TODO (2021-11-17): for the future, look into setting up a pipeline for handling topics on encrypted/PM channels
+      return nextTick(cb, new Error("setting topics on PMs is currently not enabled—sorry!"))
     }
     this.core.publishChannelTopic(channel, topic, cb)
   }
