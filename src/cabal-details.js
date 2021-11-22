@@ -381,7 +381,6 @@ class CabalDetails extends EventEmitter {
   // redirects private messages posted via cabalDetails.publishMessage()
   _redirectAsPrivateMessage (msg, opts, cb) {
     const recipient = msg.content.channel
-    let text = ""
     switch (msg.type) {
       case "chat/emote":
       case "chat/text":
