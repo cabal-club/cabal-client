@@ -22,6 +22,43 @@ module.exports = {
       }
     }
   },
+  pm: {
+    help: () => 'send a private message to a user',
+    category: ["pm", "basics"],
+    alias: ["w"], 
+    call: (cabal, res, arg) => {
+      var args = arg ? arg.split(/\s+/) : []
+      if (args.length < 2) {
+        res.info('usage: /pm NICK{.PUBKEY} <text>')
+        return res.end()
+      }
+      var keys = parseNameToKeys(cabal, args[0])
+
+      var id = args[0]
+      var keys = parseNameToKeys(cabal, id)
+      if (keys.length === 0) {
+        res.info(`no matching user found for ${id}`)
+        return res.end()
+      }
+      if (keys.length > 1) {
+        res.info('more than one key matches:')
+        keys.forEach(key => {
+          res.info(`  /$pm ${id.split('.')[0]}.${key}`)
+        })
+        return res.end()
+      }
+      id = keys[0]
+      const text = args.slice(1).join(" ")
+      const msg = { 
+        type: "chat/text",
+        content: {
+          text,
+          channel: id
+        }
+      }
+      cabal.publishPrivateMessage(msg, id)
+    }
+  },
   archive: {
     help: () => 'archive a channel',
     category: ["channels"],

@@ -6,6 +6,7 @@ class ChannelDetailsBase {
   constructor (channelName) {
     this.name = channelName
 
+    this.isPrivate = false
     this.members = new Set()
     this.mentions = []
     /* archived channels are not visible in channel listings */
@@ -211,4 +212,20 @@ class VirtualChannelDetails extends ChannelDetailsBase {
   }
 }
 
-module.exports = { ChannelDetails, VirtualChannelDetails }
+class PMChannelDetails extends ChannelDetails {
+  constructor (cabal, pubkey) {
+    super(cabal, pubkey)
+    // change cabal api we read from to be private messages (not messages api)
+    this.messages = cabal.privateMessages
+    this.recipient = pubkey
+    this.isPrivate = true
+    this.topic = "private message with " + pubkey
+    this.members.add(this.recipientKey) // makes sure # members > 0 :)
+  }
+
+  toString () {
+    return `PM-${this.recipient.slice(0,8)}`
+  }
+}
+
+module.exports = { ChannelDetails, VirtualChannelDetails, PMChannelDetails }

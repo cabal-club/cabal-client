@@ -1,6 +1,7 @@
 const EventEmitter = require('events')
+const Cabal = require('cabal-core')
 const debug = require('debug')('cabal-client')
-const { VirtualChannelDetails, ChannelDetails } = require('./channel-details')
+const { VirtualChannelDetails, ChannelDetails, PMChannelDetails } = require('./channel-details')
 const User = require('./user')
 const to = require('to2')
 const pump = require('pump')
@@ -34,7 +35,9 @@ class CabalDetails extends EventEmitter {
    * @fires CabalDetails#user-updated
    * @fires CabalDetails#new-channel
    * @fires CabalDetails#new-message
+   * @fires CabalDetails#private-message
    * @fires CabalDetails#publish-message
+   * @fires CabalDetails#publish-private-message
    * @fires CabalDetails#publish-nick
    * @fires CabalDetails#status-message
    * @fires CabalDetails#topic
@@ -105,10 +108,29 @@ class CabalDetails extends EventEmitter {
   }
 
   messageListener (message) {
-    const channel = message.value.content.channel
+    let channel = message.value.content.channel
     const mention = this._handleMention(message)
+    if (message.value.private) {
+      const isPrivate = message.value.private
+      if (isPrivate || isPrivate === "true") {
+        // PM channel should always be that of the pubkey that we are chatting with
+        // (and not our own pubkey—unless we are chattin with ourselves, bien sûr)
+        channel = this.user.key === message.key ? channel : message.key
+        const details = this.channels[channel]
+        if (!details) { // incoming PM & no pm channel?! instantiate a pm channel asap!
+          this.channels[channel] = new PMChannelDetails(this.core, channel)
+        }
+        this._emitUpdate('private-message', {
+          channel,
+          author: this.users[message.key] || { key: message.key, name: message.key, local: false, online: false },
+          message: Object.assign({}, message)
+        })
+      }
+    }
+
     this.channels[channel].handleMessage(message)
     if (mention) this.channels[channel].addMention(message)
+
     this._emitUpdate('new-message', {
       channel,
       author: this.users[message.key] || { key: message.key, name: message.key, local: false, online: false },
@@ -138,8 +160,7 @@ class CabalDetails extends EventEmitter {
       }
     } else if (m) {
       this._res("warn").info(`${m[1]} is not a command. type /help for commands`)
-    } else if (this.chname !== '!status' && /\S/.test(line)) {
-      // disallow typing to !status
+    } else if (this.chname !== '!status' && /\S/.test(line)) { // disallow typing to !status
       this.publishMessage({
         type: 'chat/text',
         content: {
@@ -188,6 +209,17 @@ class CabalDetails extends EventEmitter {
     // no typing to !status
     if (msg.content.channel === "!status") return cb(new Error("not allowed to post to !status"), null) 
     if (!msg.type) msg.type = 'chat/text'
+
+    // detect if published-to channel is private, if so change message type & redirect contents 
+    // rationale: we're trying to catch cases where a PM is incorrectly being sent to a public channel
+    // (i.e. msg.content.channel === a user's pubkey; dis bad, might even be malicious)
+    //
+    // note: the latter conditional guards against someone maliciously trying to create a channel conforming
+    // to an existing-but-not-synced-on-the-local-client public key; implicitly, we now treat all channel names that conform to the public key
+    // format (64ch hex) as private message channels
+    if (this.isChannelPrivate(msg.content.channel) || Cabal.isHypercoreKey(msg.content.channel)) {
+      return this._redirectAsPrivateMessage(msg, opts, cb)
+    }
     this.core.publish(msg, opts, (err, m) => {
       this._emitUpdate('publish-message', { message: msg })
       cb(err, m)
@@ -217,6 +249,11 @@ class CabalDetails extends EventEmitter {
    */
   publishChannelTopic (channel = this.chname, topic, cb) {
     if (!cb) { cb = noop }
+    // make sure we don't publish topic messages for PMs
+    if (this.channels[channel] && this.channels[channel].isPrivate) {
+      // TODO (2021-11-17): for the future, look into setting up a pipeline for handling topics on encrypted/PM channels
+      return nextTick(cb, new Error("setting topics on PMs is currently not enabled—sorry!"))
+    }
     this.core.publishChannelTopic(channel, topic, cb)
   }
 
@@ -279,15 +316,27 @@ class CabalDetails extends EventEmitter {
   /**
    * @param {object} [opts]
    * @property {boolean} includeArchived - Determines whether to include archived channels or not. Defaults to false.
+   * @property {boolean} includePM - Determines whether to include private message channels or not. Defaults to false.
    * * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members.
    */
   getChannels (opts) {
     if (!opts || typeof opts !== "object" || opts[Symbol.iterator]) { 
-      opts = { includeArchived: false } 
+      opts = { includeArchived: false, includePM: false } 
     }
-    return Object.keys(this.channels)
-      .filter(ch => this.channels[ch].members.size > 0 && (opts.includeArchived || !this.channels[ch].archived))
+    // sort regular channels and PMs separately, then concat them together (if including PM) before returning
+    const sortedChannels = Object.keys(this.channels)
+      .filter(ch => 
+        ch != "!status" /* exclude status, it's included later */
+        && this.channels[ch].members.size > 0 
+        && (!this.channels[ch].isPrivate)
+        && (opts.includeArchived || !this.channels[ch].archived)
+      )
       .sort()
+    // get all PMs with non-hidden users && sort them
+    const sortedPMs = Object.keys(this.channels)
+      .filter(ch => (this.channels[ch].isPrivate) && !this.users[ch].isHidden())
+      .sort()
+    return Array.prototype.concat(["!status"], opts.includePM ? sortedPMs : [], sortedChannels)
   }
 
   // returns a ChannelDetails object
@@ -319,10 +368,82 @@ class CabalDetails extends EventEmitter {
   }
 
   /**
-   * @returns {string[]} A list of all of the channel names the user has joined.
+   * Get the list of currently opened private message channels.
+   * @returns{string[]} A list of all public keys you have an open PM with (hidden users are removed from list).
+   */
+  getPrivateMessageList () {
+    return Object.keys(this.channels).filter(ch => this.channels[ch].isPrivate && (ch in this.users && !this.users[ch].isHidden()))
+  }
+
+  /**
+   * Query if the passed in channel name is private or not
+   * @returns{boolean} true if channel is private, false if not (or if it doesn't exist)
+   */
+  isChannelPrivate(channel) {
+    const details = this.channels[channel]
+    if (!details) { return false }
+    return details.isPrivate
+  }
+
+  // redirects private messages posted via cabalDetails.publishMessage()
+  _redirectAsPrivateMessage (msg, opts, cb) {
+    const recipient = msg.content.channel
+    switch (msg.type) {
+      case "chat/emote":
+      case "chat/text":
+        // these types are definitely supported : )
+        break
+      default:
+        debug("redirectAsPM received msg type", msg.content.type)
+        return cb(new Error("private messages currently lacks support for message type: " + msg.type))
+        break
+    }
+    this.publishPrivateMessage(msg, recipient, cb)
+  }
+  /**
+   * Send a private message to a recipient. Open and focus a new private message channel if one doesn't exist already.
+   * @param {string} msg - a message object conforming to any type of chat message  (e.g. `chat/text` or `chat/emote`),
+   * see CabalDetails.publishMessage for more information
+   * @param {string} recipientKey - the public key of the recipient
+   * @param {function} [cb] - optional callback triggered after trying to publish (returns err if failed)
+   */
+  publishPrivateMessage (msg, recipientKey, cb) {
+    if (!cb) cb = noop
+    // validate that the recipientKey exactly matches the requirements imposed on user public keys
+    if (!Cabal.isHypercoreKey(recipientKey)) {
+      return cb(new Error("tried to publish a private message to a key that does not match the public key format"))
+    }
+    // check to see make sure we know of a user with recipientKey
+    if (!recipientKey in this.users) {
+      return cb(new Error("tried to publish a private message to unknown public key"))
+    }
+    let pmInstance = this.channels[recipientKey]
+    // check to see if we have opened a pm with this person before
+    if (!pmInstance) {
+      // if not: add a new PMChannelDetails instance to channels
+      this.channels[recipientKey] = new PMChannelDetails(this.core, recipientKey) 
+      // focus it
+      this.focusChannel(recipientKey)
+    } else if (!pmInstance.isPrivate) { // pm channel is not an actual pm instance! this should probably never happen, though
+      return cb(new Error("tried to publish a private message to a non-private message channel"))
+    }
+
+    // publish message to cabal-core, where it will be encrypted
+    this.core.publishPrivate(msg, recipientKey, (err) => {
+      // publishing failed somehow
+      if (err) {
+        return cb(err)
+      }
+      this._emitUpdate('publish-private-message', { ...msg })
+      cb()
+    })
+  }
+
+  /**
+   * @returns {string[]} A list of all of the channel names the user has joined. Excludes private message channels.
    */
   getJoinedChannels () {
-    return Object.keys(this.channels).filter(c => this.channels[c].joined).sort()
+    return Object.keys(this.channels).filter(c => this.channels[c].joined && !this.channels[c].isPrivate).sort()
   }
 
   /**
@@ -351,11 +472,16 @@ class CabalDetails extends EventEmitter {
       return nextTick(cb, new Error('cannot join invalid channel name'))
     }
     var details = this.channels[channel]
+    // disallow joining a channel that is exactly another peer's public key
+    if ((details && details.isPrivate) || Cabal.isHypercoreKey(channel)) {
+      return nextTick(cb, new Error("tried to join a private message channel (start a pm using /pm <name>)"))
+    }
     // we created a channel
     if (!details) {
       details = new ChannelDetails(this.core, channel)
       this.channels[channel] = details
     }
+
     // we weren't already in the channel, join
     if (!details.join()) {
       var joinMsg = {
@@ -388,6 +514,9 @@ class CabalDetails extends EventEmitter {
     if (channel === '!status') {
       return nextTick(cb, new Error('cannot leave the !status channel'))
     }
+    if ((details && details.isPrivate) || Cabal.isHypercoreKey(channel)) {
+      return nextTick(cb, new Error('cannot join or leave private message channels'))
+    }
     var joined = this.getJoinedChannels()
     var details = this.channels[channel]
     if (!details) {
@@ -402,16 +531,16 @@ class CabalDetails extends EventEmitter {
       }
       this.core.publish(leaveMsg, (err) => {
         if (err) return cb(err)
-        var indexOldChannel = joined.indexOf(channel)
-        var newChannel
-        // open up another channel if we left the one we were viewing
-        if (channel === this.chname) {
-          let newIndex = indexOldChannel + 1
-          if (indexOldChannel >= joined.length) newIndex = 0
-          newChannel = joined[newIndex] || '!status'
-        }
-        this.unfocusChannel(channel, newChannel)
-        cb(null)
+      var indexOldChannel = joined.indexOf(channel)
+      var newChannel
+      // open up another channel if we left the one we were viewing
+      if (channel === this.chname) {
+        let newIndex = indexOldChannel + 1
+        if (indexOldChannel >= joined.length) newIndex = 0
+        newChannel = joined[newIndex] || '!status'
+      }
+      this.unfocusChannel(channel, newChannel)
+      cb(null)
       })
     }
   }
@@ -436,6 +565,9 @@ class CabalDetails extends EventEmitter {
       const err = new Error('cannot archive non-existent channel')
       debug(err)
       return nextTick(cb, err)
+    }
+    if (details.isPrivate) {
+      return nextTick(cb, new Error('cannot archive private message channels'))
     }
     this.channels[channel].archive()
     this.publishMessage({
@@ -467,6 +599,9 @@ class CabalDetails extends EventEmitter {
       const err = new Error('cannot unarchive non-existent channel')
       debug(err)
       return nextTick(cb, err)
+    }
+    if (details.isPrivate) {
+      return nextTick(cb, new Error('cannot archive or unarchive private message channels'))
     }
     this.channels[channel].unarchive()
     this.publishMessage({
@@ -535,7 +670,37 @@ class CabalDetails extends EventEmitter {
 
   /**
    *
+   * Fires when a new private message has been posted
+   * @event CabalDetails#private-message
+   * @type {object}
+   * @property {string} channel - The public key corresponding to the private message channel 
+   * @property {object} author - Object containing the user that posted the message
+   * @prop {string} author.name - Nickname of the user
+   * @prop {string} author.key - Public key of the user
+   * @prop {boolean} author.local - True if user is the local user (i.e. at the keyboard and not someone else in the cabal)
+   * @prop {boolean} author.online - True if the user is currently online
+   * @prop {object} message - The message that was posted. See `cabal-core` for more complete message documentation.
+   * @prop {string} message.key - Public key of the user posting the message (again, it's a quirk)
+   * @prop {number} message.seq - Sequence number of the message in the user's append-only log
+   * @prop {object} message.value - Message content, see `cabal-core` documentation for more information.
+   *
+   */
+
+  /**
+   *
    * Fires when the local user has published a new message
+   * @event CabalDetails#publish-message
+   * @type {object}
+   * @prop {object} message - The message that was posted. See `cabal-core` for more complete message documentation.
+   * @prop {string} message.type - Message type that was posted, e.g. `chat/text` or `chat/emote`
+   * @prop {string} message.content - Message contents, e.g. channel and text if `chat/text`
+   * @prop {number} message.timestamp - The time the message was published
+   *
+   */
+
+  /**
+   *
+   * Fires when the local user has published a new private message
    * @event CabalDetails#publish-message
    * @type {object}
    * @prop {object} message - The message that was posted. See `cabal-core` for more complete message documentation.
@@ -717,6 +882,7 @@ class CabalDetails extends EventEmitter {
     invoke(cabal.archives, "get", init.getArchivesCallback)
     invoke(cabal, "getLocalKey", init.getLocalKeyCallback)
     invoke(cabal.users, "getAll", init.getAllUsersCallback)
+    invoke(cabal.privateMessages, "list", init.getOpenedPMs)
 
     /* register all the listeners we'll be using */
     this.registerListener(cabal.users.events, 'update', (key) => {
@@ -798,7 +964,7 @@ class CabalDetails extends EventEmitter {
     // register to be notified of new channels as they are created
     this.registerListener(cabal.channels.events, 'add', (channel) => {
       const details = this.channels[channel]
-      if (!details) {
+      if (!details && !Cabal.isHypercoreKey(channel)) {
         this.channels[channel] = new ChannelDetails(cabal, channel)
       }
       // TODO: only do this for our joined channels, instead of all channels

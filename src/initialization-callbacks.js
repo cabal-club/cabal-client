@@ -1,6 +1,8 @@
 const timestamp = require('monotonic-timestamp')
-const { ChannelDetails } = require('./channel-details')
+const Cabal = require("cabal-core")
+const { ChannelDetails, PMChannelDetails } = require('./channel-details')
 const User = require('./user')
+
 /* this file contains callbacks used for populating the initial state. these are all invoked inside
  * CabalDetails._initialize. once all the callbacks have finished, cabal-client is ready to be used & queried.
  *
@@ -12,7 +14,7 @@ module.exports.getArchivesCallback = function (err, archivedChannels) {
   cabal.channels.get((err, channels) => {
     channels.forEach((channel) => {
       const details = this.channels[channel]
-      if (!details) {
+      if (!details && !Cabal.isHypercoreKey(channel)) {
         this.channels[channel] = new ChannelDetails(cabal, channel)
       }
       // mark archived channels as such
@@ -29,12 +31,31 @@ module.exports.getArchivesCallback = function (err, archivedChannels) {
 
       // for each channel, get the topic
       cabal.topics.get(channel, (err, topic) => {
-        this.channels[channel].topic = topic || ''
+        let defaultVal = this.channels[channel].topic || ''
+        this.channels[channel].topic = topic || defaultVal
       })
     })
 
     this._finish()
   })
+}
+
+module.exports.getOpenedPMs = function (err, privates) {
+  const cabal = this.core
+  // handle all incoming private messages
+  cabal.privateMessages.events.on("message", (pubkey, message) => { 
+    // if pubkey is hidden, do not handle or display the private message
+    if (this.users[pubkey].isHidden()) { return }
+    this.messageListener(message) 
+  })
+  // populate private message channels
+  privates.forEach((pubkey) => {
+    const details = this.channels[pubkey]
+    if (!details) {
+      this.channels[pubkey] = new PMChannelDetails(cabal, pubkey)
+    }
+  })
+  this._finish()
 }
 
 module.exports.getLocalKeyCallback = function (err, lkey) {
