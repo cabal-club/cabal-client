@@ -500,7 +500,7 @@ Returns a string path of where all of the cabals are stored on the hard drive.
 <a name="CabalDetails"></a>
 
 ## CabalDetails
-**Emits**: [<code>update</code>](#CabalDetails+event_update), [<code>init</code>](#CabalDetails+event_init), [<code>info</code>](#CabalDetails+event_info), [<code>user-updated</code>](#CabalDetails+event_user-updated), [<code>new-channel</code>](#CabalDetails+event_new-channel), [<code>new-message</code>](#CabalDetails+event_new-message), [<code>publish-message</code>](#CabalDetails+event_publish-message), [<code>publish-nick</code>](#CabalDetails+event_publish-nick), [<code>status-message</code>](#CabalDetails+event_status-message), [<code>topic</code>](#CabalDetails+event_topic), [<code>channel-focus</code>](#CabalDetails+event_channel-focus), [<code>channel-join</code>](#CabalDetails+event_channel-join), [<code>channel-leave</code>](#CabalDetails+event_channel-leave), [<code>cabal-focus</code>](#CabalDetails+event_cabal-focus), [<code>started-peering</code>](#CabalDetails+event_started-peering), [<code>stopped-peering</code>](#CabalDetails+event_stopped-peering)  
+**Emits**: [<code>update</code>](#CabalDetails+event_update), [<code>init</code>](#CabalDetails+event_init), [<code>info</code>](#CabalDetails+event_info), [<code>user-updated</code>](#CabalDetails+event_user-updated), [<code>new-channel</code>](#CabalDetails+event_new-channel), [<code>new-message</code>](#CabalDetails+event_new-message), [<code>private-message</code>](#CabalDetails+event_private-message), [<code>publish-message</code>](#CabalDetails+event_publish-message), <code>CabalDetails#event:publish-private-message</code>, [<code>publish-nick</code>](#CabalDetails+event_publish-nick), [<code>status-message</code>](#CabalDetails+event_status-message), [<code>topic</code>](#CabalDetails+event_topic), [<code>channel-focus</code>](#CabalDetails+event_channel-focus), [<code>channel-join</code>](#CabalDetails+event_channel-join), [<code>channel-leave</code>](#CabalDetails+event_channel-leave), [<code>cabal-focus</code>](#CabalDetails+event_cabal-focus), [<code>started-peering</code>](#CabalDetails+event_started-peering), [<code>stopped-peering</code>](#CabalDetails+event_stopped-peering)  
 
 * [CabalDetails](#CabalDetails)
     * [new CabalDetails({, done)](#new_CabalDetails_new)
@@ -515,6 +515,9 @@ Returns a string path of where all of the cabals are stored on the hard drive.
     * [.getCurrentChannel()](#CabalDetails+getCurrentChannel) ⇒ <code>string</code>
     * [.getCurrentChannelDetails()](#CabalDetails+getCurrentChannelDetails) ⇒ <code>ChannelDetails</code>
     * [.clearVirtualMessages([channel])](#CabalDetails+clearVirtualMessages)
+    * [.getPrivateMessageList()](#CabalDetails+getPrivateMessageList)
+    * [.isChannelPrivate()](#CabalDetails+isChannelPrivate)
+    * [.publishPrivateMessage(msg, recipientKey, [cb])](#CabalDetails+publishPrivateMessage)
     * [.getJoinedChannels()](#CabalDetails+getJoinedChannels) ⇒ <code>Array.&lt;string&gt;</code>
     * [.getLocalUser()](#CabalDetails+getLocalUser) ⇒ <code>user</code>
     * [.getLocalName()](#CabalDetails+getLocalName) ⇒ <code>string</code>
@@ -529,6 +532,8 @@ Returns a string path of where all of the cabals are stored on the hard drive.
     * ["user-updated"](#CabalDetails+event_user-updated)
     * ["new-channel"](#CabalDetails+event_new-channel)
     * ["new-message"](#CabalDetails+event_new-message)
+    * ["private-message"](#CabalDetails+event_private-message)
+    * ["publish-message"](#CabalDetails+event_publish-message)
     * ["publish-message"](#CabalDetails+event_publish-message)
     * ["publish-nick"](#CabalDetails+event_publish-nick)
     * ["status-message"](#CabalDetails+event_status-message)
@@ -672,7 +677,8 @@ Add a status message, visible locally only.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| includeArchived | <code>boolean</code> | Determines whether to include archived channels or not. Defaults to false. * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members. |
+| includeArchived | <code>boolean</code> | Determines whether to include archived channels or not. Defaults to false. |
+| includePM | <code>boolean</code> | Determines whether to include private message channels or not. Defaults to false. * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members. |
 
 
 * * *
@@ -704,10 +710,43 @@ Virtual messages are local only.
 
 * * *
 
+<a name="CabalDetails+getPrivateMessageList"></a>
+
+### cabalDetails.getPrivateMessageList()
+Get the list of currently opened private message channels.
+
+**Returns{string[]}**: A list of all public keys you have an open PM with (hidden users are removed from list).  
+
+* * *
+
+<a name="CabalDetails+isChannelPrivate"></a>
+
+### cabalDetails.isChannelPrivate()
+Query if the passed in channel name is private or not
+
+**Returns{boolean}**: true if channel is private, false if not (or if it doesn't exist)  
+
+* * *
+
+<a name="CabalDetails+publishPrivateMessage"></a>
+
+### cabalDetails.publishPrivateMessage(msg, recipientKey, [cb])
+Send a private message to a recipient. Open and focus a new private message channel if one doesn't exist already.
+
+**Params**
+
+- msg <code>string</code> - a message object conforming to any type of chat message  (e.g. `chat/text` or `chat/emote`),
+see CabalDetails.publishMessage for more information
+- recipientKey <code>string</code> - the public key of the recipient
+- *cb* <code>function</code> - optional callback triggered after trying to publish (returns err if failed)
+
+
+* * *
+
 <a name="CabalDetails+getJoinedChannels"></a>
 
 ### cabalDetails.getJoinedChannels() ⇒ <code>Array.&lt;string&gt;</code>
-**Returns**: <code>Array.&lt;string&gt;</code> - A list of all of the channel names the user has joined.  
+**Returns**: <code>Array.&lt;string&gt;</code> - A list of all of the channel names the user has joined. Excludes private message channels.  
 
 * * *
 
@@ -880,10 +919,52 @@ Fires when a new message has been posted
 
 * * *
 
+<a name="CabalDetails+event_private-message"></a>
+
+### "private-message"
+Fires when a new private message has been posted
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| channel | <code>string</code> | The public key corresponding to the private message channel |
+| author | <code>object</code> | Object containing the user that posted the message |
+| author.name | <code>string</code> | Nickname of the user |
+| author.key | <code>string</code> | Public key of the user |
+| author.local | <code>boolean</code> | True if user is the local user (i.e. at the keyboard and not someone else in the cabal) |
+| author.online | <code>boolean</code> | True if the user is currently online |
+| message | <code>object</code> | The message that was posted. See `cabal-core` for more complete message documentation. |
+| message.key | <code>string</code> | Public key of the user posting the message (again, it's a quirk) |
+| message.seq | <code>number</code> | Sequence number of the message in the user's append-only log |
+| message.value | <code>object</code> | Message content, see `cabal-core` documentation for more information. |
+
+
+* * *
+
 <a name="CabalDetails+event_publish-message"></a>
 
 ### "publish-message"
 Fires when the local user has published a new message
+
+**Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| message | <code>object</code> | The message that was posted. See `cabal-core` for more complete message documentation. |
+| message.type | <code>string</code> | Message type that was posted, e.g. `chat/text` or `chat/emote` |
+| message.content | <code>string</code> | Message contents, e.g. channel and text if `chat/text` |
+| message.timestamp | <code>number</code> | The time the message was published |
+
+
+* * *
+
+<a name="CabalDetails+event_publish-message"></a>
+
+### "publish-message"
+Fires when the local user has published a new private message
 
 **Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  
 **Properties**
