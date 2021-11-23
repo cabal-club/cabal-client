@@ -35,7 +35,9 @@ class CabalDetails extends EventEmitter {
    * @fires CabalDetails#user-updated
    * @fires CabalDetails#new-channel
    * @fires CabalDetails#new-message
+   * @fires CabalDetails#private-message
    * @fires CabalDetails#publish-message
+   * @fires CabalDetails#publish-private-message
    * @fires CabalDetails#publish-nick
    * @fires CabalDetails#status-message
    * @fires CabalDetails#topic
@@ -314,6 +316,7 @@ class CabalDetails extends EventEmitter {
   /**
    * @param {object} [opts]
    * @property {boolean} includeArchived - Determines whether to include archived channels or not. Defaults to false.
+   * @property {boolean} includePM - Determines whether to include private message channels or not. Defaults to false.
    * * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members.
    */
   getChannels (opts) {
@@ -369,9 +372,13 @@ class CabalDetails extends EventEmitter {
    * @returns{string[]} A list of all public keys you have an open PM with (hidden users are removed from list).
    */
   getPrivateMessageList () {
-    return Object.keys(this.channels).filter(ch => this.channels[ch].isPrivate)
+    return Object.keys(this.channels).filter(ch => this.channels[ch].isPrivate && (ch in this.users && !this.users[ch].isHidden()))
   }
 
+  /**
+   * Query if the passed in channel name is private or not
+   * @returns{boolean} true if channel is private, false if not (or if it doesn't exist)
+   */
   isChannelPrivate(channel) {
     const details = this.channels[channel]
     if (!details) { return false }
@@ -433,7 +440,7 @@ class CabalDetails extends EventEmitter {
   }
 
   /**
-   * @returns {string[]} A list of all of the channel names the user has joined.
+   * @returns {string[]} A list of all of the channel names the user has joined. Excludes private message channels.
    */
   getJoinedChannels () {
     return Object.keys(this.channels).filter(c => this.channels[c].joined && !this.channels[c].isPrivate).sort()
@@ -663,7 +670,37 @@ class CabalDetails extends EventEmitter {
 
   /**
    *
+   * Fires when a new private message has been posted
+   * @event CabalDetails#private-message
+   * @type {object}
+   * @property {string} channel - The public key corresponding to the private message channel 
+   * @property {object} author - Object containing the user that posted the message
+   * @prop {string} author.name - Nickname of the user
+   * @prop {string} author.key - Public key of the user
+   * @prop {boolean} author.local - True if user is the local user (i.e. at the keyboard and not someone else in the cabal)
+   * @prop {boolean} author.online - True if the user is currently online
+   * @prop {object} message - The message that was posted. See `cabal-core` for more complete message documentation.
+   * @prop {string} message.key - Public key of the user posting the message (again, it's a quirk)
+   * @prop {number} message.seq - Sequence number of the message in the user's append-only log
+   * @prop {object} message.value - Message content, see `cabal-core` documentation for more information.
+   *
+   */
+
+  /**
+   *
    * Fires when the local user has published a new message
+   * @event CabalDetails#publish-message
+   * @type {object}
+   * @prop {object} message - The message that was posted. See `cabal-core` for more complete message documentation.
+   * @prop {string} message.type - Message type that was posted, e.g. `chat/text` or `chat/emote`
+   * @prop {string} message.content - Message contents, e.g. channel and text if `chat/text`
+   * @prop {number} message.timestamp - The time the message was published
+   *
+   */
+
+  /**
+   *
+   * Fires when the local user has published a new private message
    * @event CabalDetails#publish-message
    * @type {object}
    * @prop {object} message - The message that was posted. See `cabal-core` for more complete message documentation.
