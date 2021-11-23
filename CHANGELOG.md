@@ -1,5 +1,39 @@
 # Changelog
 
+## [7.2.0] - 2021-11-23
+
+### Changed
+
+- bump cabal-core to 15.0.0 (only changes were to pm api) ([#82](https://github.com/cabal-club/cabal-client/issues/82)) ([**@cblgh**](https://github.com/cblgh))
+- disallow channel names == hypercore key, support latest core pm format ([#82](https://github.com/cabal-club/cabal-client/issues/82)) ([**@cblgh**](https://github.com/cblgh))
+  - A new convention was introduced to limit malicious use in clients: Channel names conforming to the hypercore public key format are forbidden in cabal-client as names for regular channel names (i.e. no channel names that are 64 hex characters)—these are restricted to private channels only (namely: one per person you are chatting with, the name being their public key (or yours, from their perspective))
+- Revert "only add message listener when we're adding a new channel" ([`1bf10a9`](https://github.com/cabal-club/cabal-client/commit/1bf10a9)) ([**@cblgh**](https://github.com/cblgh)).
+
+  This reverts commit [`1dbd522`](https://github.com/cabal-club/cabal-client/commit/1dbd5227923aa9063b93b57cfa9dbed31e246dda).
+
+  It seems this commit introduced a regression in functionality such that
+  messages do not appear in channels
+  ([#78](https://github.com/cabal-club/cabal-client/issues/78)) and might also be
+  responsible for a similar bug in [cabal-desktop@6.0.8](mailto:cabal-desktop@6.0.8)
+
+  It would be good to only add the relevant message listeners, instead of
+  duplicates, but I think it will have to be done anew with fresh eyes.
+
+### Added
+
+Adds support for [cabal-core's private message](https://github.com/cabal-club/cabal-core/#private-messages):
+
+- a new `CabalDetails.publishPrivateMessage` function has been added
+- `CabalDetails.getPrivateMessageList` returns a list of channel names corresponding to ongoing PMs for the local user
+- `CabalDetails.isChannelPrivate(channel)` returns true if the passed in channel is a private message channel, false otherwise
+- `CabalDetails.publishMessage` now redirects a published message to `publishPrivateMessage` if it is used to post a message to a private message channel
+- `publish-private-message`, `private-message` events are now emitted
+- the `PMChannelDetails` has been added to enable support for private message channels with minimal duplicated functionality
+- `CabalDetails.getChannels(opts)` was extended with an option `includePM` to include private message channels in the returned result
+- PMs are moderation aware: if you hide a user the channel is hidden and no subsequent PMs will be displayed in your client
+
+For more information, see the [API documentation](https://github.com/cabal-club/cabal-client/blob/master/api.md).
+
 ## [7.1.0] - 2021-10-23
 
 ### Changed
@@ -25,6 +59,8 @@ _The updated version of `cabal-core` indirectly contains major changes to the un
 ## [6.3.2] - 2021-05-01
 
 _This is not the first version, but the first version in this changelog to save some time._
+
+[7.2.0]: https://github.com/cabal-club/cabal-client/compare/v7.1.0...v7.2.0
 
 [7.1.0]: https://github.com/cabal-club/cabal-client/compare/v7.0.0...v7.1.0
 
