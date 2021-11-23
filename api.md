@@ -500,7 +500,7 @@ Returns a string path of where all of the cabals are stored on the hard drive.
 <a name="CabalDetails"></a>
 
 ## CabalDetails
-**Emits**: [<code>update</code>](#CabalDetails+event_update), [<code>init</code>](#CabalDetails+event_init), [<code>info</code>](#CabalDetails+event_info), [<code>user-updated</code>](#CabalDetails+event_user-updated), [<code>new-channel</code>](#CabalDetails+event_new-channel), [<code>new-message</code>](#CabalDetails+event_new-message), [<code>private-message</code>](#CabalDetails+event_private-message), [<code>publish-message</code>](#CabalDetails+event_publish-message), <code>CabalDetails#event:publish-private-message</code>, [<code>publish-nick</code>](#CabalDetails+event_publish-nick), [<code>status-message</code>](#CabalDetails+event_status-message), [<code>topic</code>](#CabalDetails+event_topic), [<code>channel-focus</code>](#CabalDetails+event_channel-focus), [<code>channel-join</code>](#CabalDetails+event_channel-join), [<code>channel-leave</code>](#CabalDetails+event_channel-leave), [<code>cabal-focus</code>](#CabalDetails+event_cabal-focus), [<code>started-peering</code>](#CabalDetails+event_started-peering), [<code>stopped-peering</code>](#CabalDetails+event_stopped-peering)  
+**Emits**: [<code>update</code>](#CabalDetails+event_update), [<code>init</code>](#CabalDetails+event_init), [<code>info</code>](#CabalDetails+event_info), [<code>user-updated</code>](#CabalDetails+event_user-updated), [<code>new-channel</code>](#CabalDetails+event_new-channel), [<code>new-message</code>](#CabalDetails+event_new-message), [<code>private-message</code>](#CabalDetails+event_private-message), [<code>publish-message</code>](#CabalDetails+event_publish-message), [<code>publish-private-message</code>](#CabalDetails+event_publish-private-message), [<code>publish-nick</code>](#CabalDetails+event_publish-nick), [<code>status-message</code>](#CabalDetails+event_status-message), [<code>topic</code>](#CabalDetails+event_topic), [<code>channel-focus</code>](#CabalDetails+event_channel-focus), [<code>channel-join</code>](#CabalDetails+event_channel-join), [<code>channel-leave</code>](#CabalDetails+event_channel-leave), [<code>cabal-focus</code>](#CabalDetails+event_cabal-focus), [<code>started-peering</code>](#CabalDetails+event_started-peering), [<code>stopped-peering</code>](#CabalDetails+event_stopped-peering)  
 
 * [CabalDetails](#CabalDetails)
     * [new CabalDetails({, done)](#new_CabalDetails_new)
@@ -511,7 +511,7 @@ Returns a string path of where all of the cabals are stored on the hard drive.
     * [.getTopic([channel])](#CabalDetails+getTopic) ⇒ <code>string</code>
     * [.getChannelMembers([channel])](#CabalDetails+getChannelMembers) ⇒ <code>Array.&lt;object&gt;</code>
     * [.addStatusMessage(message, [channel])](#CabalDetails+addStatusMessage)
-    * [.getChannels([opts])](#CabalDetails+getChannels)
+    * [.getChannels([opts])](#CabalDetails+getChannels) ⇒ <code>Array.&lt;string&gt;</code>
     * [.getCurrentChannel()](#CabalDetails+getCurrentChannel) ⇒ <code>string</code>
     * [.getCurrentChannelDetails()](#CabalDetails+getCurrentChannelDetails) ⇒ <code>ChannelDetails</code>
     * [.clearVirtualMessages([channel])](#CabalDetails+clearVirtualMessages)
@@ -534,7 +534,7 @@ Returns a string path of where all of the cabals are stored on the hard drive.
     * ["new-message"](#CabalDetails+event_new-message)
     * ["private-message"](#CabalDetails+event_private-message)
     * ["publish-message"](#CabalDetails+event_publish-message)
-    * ["publish-message"](#CabalDetails+event_publish-message)
+    * ["publish-private-message"](#CabalDetails+event_publish-private-message)
     * ["publish-nick"](#CabalDetails+event_publish-nick)
     * ["status-message"](#CabalDetails+event_status-message)
     * ["topic"](#CabalDetails+event_topic)
@@ -668,7 +668,8 @@ Add a status message, visible locally only.
 
 <a name="CabalDetails+getChannels"></a>
 
-### cabalDetails.getChannels([opts])
+### cabalDetails.getChannels([opts]) ⇒ <code>Array.&lt;string&gt;</code>
+**Returns**: <code>Array.&lt;string&gt;</code> - a list of all the channels in this cabal. Does not return channels with 0 members.  
 **Params**
 
 - *opts* <code>object</code>
@@ -678,7 +679,7 @@ Add a status message, visible locally only.
 | Name | Type | Description |
 | --- | --- | --- |
 | includeArchived | <code>boolean</code> | Determines whether to include archived channels or not. Defaults to false. |
-| includePM | <code>boolean</code> | Determines whether to include private message channels or not. Defaults to false. * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members. |
+| includePM | <code>boolean</code> | Determines whether to include private message channels or not. Defaults to false. |
 
 
 * * *
@@ -961,9 +962,9 @@ Fires when the local user has published a new message
 
 * * *
 
-<a name="CabalDetails+event_publish-message"></a>
+<a name="CabalDetails+event_publish-private-message"></a>
 
-### "publish-message"
+### "publish-private-message"
 Fires when the local user has published a new private message
 
 **Kind**: event emitted by [<code>CabalDetails</code>](#CabalDetails)  

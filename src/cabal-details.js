@@ -317,7 +317,7 @@ class CabalDetails extends EventEmitter {
    * @param {object} [opts]
    * @property {boolean} includeArchived - Determines whether to include archived channels or not. Defaults to false.
    * @property {boolean} includePM - Determines whether to include private message channels or not. Defaults to false.
-   * * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members.
+   * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members.
    */
   getChannels (opts) {
     if (!opts || typeof opts !== "object" || opts[Symbol.iterator]) { 
@@ -701,7 +701,7 @@ class CabalDetails extends EventEmitter {
   /**
    *
    * Fires when the local user has published a new private message
-   * @event CabalDetails#publish-message
+   * @event CabalDetails#publish-private-message
    * @type {object}
    * @prop {object} message - The message that was posted. See `cabal-core` for more complete message documentation.
    * @prop {string} message.type - Message type that was posted, e.g. `chat/text` or `chat/emote`
