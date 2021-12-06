@@ -21,8 +21,6 @@ module.exports.getArchivesCallback = function (err, archivedChannels) {
       if (archivedChannels.indexOf(channel) >= 0) {
         this.channels[channel].archive()
       }
-      // listen for updates that happen within the channel
-      cabal.messages.events.on(channel, this.messageListener.bind(this))
 
       // add all users joined to a channel
       cabal.memberships.getUsers(channel, (err, users) => {
