@@ -680,6 +680,7 @@ Add a status message, visible locally only.
 | --- | --- | --- |
 | includeArchived | <code>boolean</code> | Determines whether to include archived channels or not. Defaults to false. |
 | includePM | <code>boolean</code> | Determines whether to include private message channels or not. Defaults to false. |
+| onlyJoined | <code>boolean</code> | Determines whether to limit returned channels to only those that are joined or not. Defaults to false. |
 
 
 * * *
