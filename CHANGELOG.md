@@ -1,5 +1,11 @@
 # Changelog
 
+## [7.2.1] - 2021-12-11
+
+### Changed
+
+- getChannels: add onlyJoined param ([`1bb9d3d`](https://github.com/cabal-club/cabal-client/commit/1bb9d3d)) ([**@cblgh**](https://github.com/cblgh))
+
 ## [7.2.0] - 2021-11-23
 
 ### Changed
@@ -59,6 +65,8 @@ _The updated version of `cabal-core` indirectly contains major changes to the un
 ## [6.3.2] - 2021-05-01
 
 _This is not the first version, but the first version in this changelog to save some time._
+
+[7.2.1]: https://github.com/cabal-club/cabal-client/compare/v7.2.0...v7.2.1
 
 [7.2.0]: https://github.com/cabal-club/cabal-client/compare/v7.1.0...v7.2.0
 
