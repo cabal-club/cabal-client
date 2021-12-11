@@ -220,6 +220,7 @@ class PMChannelDetails extends ChannelDetails {
     this.recipient = pubkey
     this.isPrivate = true
     this.topic = "private message with " + pubkey
+    this.joined = true
     this.members.add(this.recipientKey) // makes sure # members > 0 :)
   }
 

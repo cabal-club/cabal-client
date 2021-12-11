@@ -317,11 +317,12 @@ class CabalDetails extends EventEmitter {
    * @param {object} [opts]
    * @property {boolean} includeArchived - Determines whether to include archived channels or not. Defaults to false.
    * @property {boolean} includePM - Determines whether to include private message channels or not. Defaults to false.
+   * @property {boolean} onlyJoined - Determines whether to limit returned channels to only those that are joined or not. Defaults to false.
    * @returns {string[]} a list of all the channels in this cabal. Does not return channels with 0 members.
    */
   getChannels (opts) {
     if (!opts || typeof opts !== "object" || opts[Symbol.iterator]) { 
-      opts = { includeArchived: false, includePM: false } 
+      opts = { includeArchived: false, includePM: false, onlyJoined: false}
     }
     // sort regular channels and PMs separately, then concat them together (if including PM) before returning
     const sortedChannels = Object.keys(this.channels)
@@ -330,6 +331,7 @@ class CabalDetails extends EventEmitter {
         && this.channels[ch].members.size > 0 
         && (!this.channels[ch].isPrivate)
         && (opts.includeArchived || !this.channels[ch].archived)
+        && (!opts.onlyJoined || opts.onlyJoined && this.channels[ch].joined)
       )
       .sort()
     // get all PMs with non-hidden users && sort them
