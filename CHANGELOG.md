@@ -1,5 +1,11 @@
 # Changelog
 
+## [7.2.2] - 2021-12-16
+
+### Fixed
+
+- remove duplication of channel events ([`0caff38`](https://github.com/cabal-club/cabal-client/commit/0caff38)) ([**@khubo**](https://github.com/khubo))
+
 ## [7.2.1] - 2021-12-11
 
 ### Changed
@@ -65,6 +71,8 @@ _The updated version of `cabal-core` indirectly contains major changes to the un
 ## [6.3.2] - 2021-05-01
 
 _This is not the first version, but the first version in this changelog to save some time._
+
+[7.2.2]: https://github.com/cabal-club/cabal-client/compare/v7.2.1...v7.2.2
 
 [7.2.1]: https://github.com/cabal-club/cabal-client/compare/v7.2.0...v7.2.1
 
