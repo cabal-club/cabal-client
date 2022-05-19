@@ -93,6 +93,7 @@ class CabalDetails extends EventEmitter {
     this.users = {} // public keys -> cabal-core use
     this.listeners = [] // keep track of listeners so we can remove them when we remove a cabal
     this.user = undefined
+    this.settings = client.getCabalSettings(this.key)
     this._initialize(done)
   }
 
@@ -385,6 +386,28 @@ class CabalDetails extends EventEmitter {
     const details = this.channels[channel]
     if (!details) { return false }
     return details.isPrivate
+  }
+
+  /**
+   * Join a private message channel if it is not already joined.
+   * @param {string} channel the key of the PM to join
+   */
+  joinPrivateMessage(channel) {
+    this.settings.joinedPrivateMessages.push(channel)
+    this.settings.joinedPrivateMessages = Array.from(new Set(this.settings.joinedPrivateMessages)) // dedupe array entries
+    this.client.writeCabalSettings(this.key, this.settings)
+  }
+
+  /**
+   * Leave a private message channel if it has not already been left.
+   * @param {string} channel the key of the PM to leave
+   */
+  leavePrivateMessage(channel) {
+    if (this.settings.joinedPrivateMessages.includes(channel)) {
+      // Remove the private message from the joined setting
+      this.settings.joinedPrivateMessages = this.settings.joinedPrivateMessages.filter((pm) => pm !== channel)
+    }
+    this.client.writeCabalSettings(this.key, this.settings)
   }
 
   // redirects private messages posted via cabalDetails.publishMessage()
