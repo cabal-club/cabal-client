@@ -50,7 +50,7 @@ module.exports.getOpenedPMs = function (err, privates) {
   privates.forEach((pubkey) => {
     const details = this.channels[pubkey]
     if (!details) {
-      this.channels[pubkey] = new PMChannelDetails(cabal, pubkey)
+      this.channels[pubkey] = new PMChannelDetails(this, cabal, pubkey)
     }
   })
   this._finish()

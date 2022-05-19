@@ -213,14 +213,18 @@ class VirtualChannelDetails extends ChannelDetailsBase {
 }
 
 class PMChannelDetails extends ChannelDetails {
-  constructor (cabal, pubkey) {
+  constructor (details, cabal, pubkey) {
     super(cabal, pubkey)
     // change cabal api we read from to be private messages (not messages api)
     this.messages = cabal.privateMessages
     this.recipient = pubkey
     this.isPrivate = true
     this.topic = "private message with " + pubkey
-    this.joined = true
+    Object.defineProperty(this, 'joined', {
+      get: function() {
+        return details.settings.joinedPrivateMessages.includes(pubkey)
+      }
+    })
     this.members.add(this.recipientKey) // makes sure # members > 0 :)
   }
 

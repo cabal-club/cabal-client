@@ -119,7 +119,7 @@ class CabalDetails extends EventEmitter {
         channel = this.user.key === message.key ? channel : message.key
         const details = this.channels[channel]
         if (!details) { // incoming PM & no pm channel?! instantiate a pm channel asap!
-          this.channels[channel] = new PMChannelDetails(this.core, channel)
+          this.channels[channel] = new PMChannelDetails(this, this.core, channel)
         }
         this._emitUpdate('private-message', {
           channel,
@@ -446,7 +446,7 @@ class CabalDetails extends EventEmitter {
     // check to see if we have opened a pm with this person before
     if (!pmInstance) {
       // if not: add a new PMChannelDetails instance to channels
-      this.channels[recipientKey] = new PMChannelDetails(this.core, recipientKey) 
+      this.channels[recipientKey] = new PMChannelDetails(this, this.core, recipientKey)
       // focus it
       this.focusChannel(recipientKey)
     } else if (!pmInstance.isPrivate) { // pm channel is not an actual pm instance! this should probably never happen, though
