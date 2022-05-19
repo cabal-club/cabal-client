@@ -3,6 +3,8 @@ const CabalDetails = require('./cabal-details')
 const collect = require('collect-stream')
 const crypto = require('hypercore-crypto')
 const DatDns = require('dat-dns')
+const fs = require('fs')
+const yaml = require('js-yaml')
 const ram = require('random-access-memory')
 const memdb = require('memdb')
 const level = require('level')
@@ -115,6 +117,63 @@ class Client {
    */
   static getCabalDirectory () {
     return path.join(os.homedir(), '.cabal', `v${Client.getDatabaseVersion()}`)
+  }
+
+  /**
+   * Returns a string path of where the cabal settings are stored on the hard drive.
+   * @returns {string} the cabal settings file path
+   */
+  static getCabalSettingsFile () {
+    return path.join(Client.getCabalDirectory(), 'settings.yml')
+  }
+
+  /**
+   * Read and parse the contents of the settings.yml file.
+   * If the file doesn't exist, return {}.
+   * @returns {object} the contents of the settings file
+   */
+  readCabalSettingsFile() {
+    var settingsFilePath = Client.getCabalSettingsFile()
+    if (fs.existsSync(settingsFilePath)) {
+      return yaml.load(fs.readFileSync(settingsFilePath, 'utf8'))
+    } else {
+      return {}
+    }
+  }
+
+  /**
+   * Get the settings for a given cabal from the settings.yml file.
+   * If the file doesn't exist or the given cabal has no settings, return the default settings.
+   * @param {string} key the cabal
+   * @returns {object} the cabal settings
+   */
+  getCabalSettings (key) {
+    return this.readCabalSettingsFile()[key] || {
+      joinedPrivateMessages: []
+    }
+  }
+
+  /**
+   * Reads the settings from the settings.yml file, updates the settings for the given cabal, then
+   * writes the revised settings to the settings.yml file.
+   * @param {string} key the cabal
+   * @param {object} settings the cabal settings
+   */
+  writeCabalSettings (key, settings) {
+    // make sure settings is well-formatted
+    if (!settings.joinedPrivateMessages) {
+      settings.joinedPrivateMessages = []
+    } else {
+      settings.joinedPrivateMessages = Array.from(new Set(settings.joinedPrivateMessages)) // dedupe array entries
+    }
+
+    var baseSettings = this.readCabalSettingsFile()
+    baseSettings[key] = settings
+
+    const data = yaml.dump(baseSettings, {
+      sortKeys: true
+    })
+    fs.writeFileSync(Client.getCabalSettingsFile(), data, 'utf8')
   }
 
   /**
