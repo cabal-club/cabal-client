@@ -337,7 +337,7 @@ class CabalDetails extends EventEmitter {
       .sort()
     // get all PMs with non-hidden users && sort them
     const sortedPMs = Object.keys(this.channels)
-      .filter(ch => (this.channels[ch].isPrivate) && !this.users[ch].isHidden())
+      .filter(ch => this.channels[ch].isPrivate && this.channels[ch].joined && !this.users[ch].isHidden())
       .sort()
     return Array.prototype.concat(["!status"], opts.includePM ? sortedPMs : [], sortedChannels)
   }
@@ -452,6 +452,7 @@ class CabalDetails extends EventEmitter {
     } else if (!pmInstance.isPrivate) { // pm channel is not an actual pm instance! this should probably never happen, though
       return cb(new Error("tried to publish a private message to a non-private message channel"))
     }
+    this.joinPrivateMessage(recipientKey)
 
     // publish message to cabal-core, where it will be encrypted
     this.core.publishPrivate(msg, recipientKey, (err) => {
@@ -499,7 +500,13 @@ class CabalDetails extends EventEmitter {
     var details = this.channels[channel]
     // disallow joining a channel that is exactly another peer's public key
     if ((details && details.isPrivate) || Cabal.isHypercoreKey(channel)) {
-      return nextTick(cb, new Error("tried to join a private message channel (start a pm using /pm <name>)"))
+      if (details && details.isPrivate) {
+        // the private message already exists, rejoin it
+        this.joinPrivateMessage(details.recipient)
+        return nextTick(cb, null)
+      } else {
+        return nextTick(cb, new Error("tried to join a new private message channel (start a pm using /pm <name>)"))
+      }
     }
     // we created a channel
     if (!details) {
@@ -540,7 +547,11 @@ class CabalDetails extends EventEmitter {
       return nextTick(cb, new Error('cannot leave the !status channel'))
     }
     if ((details && details.isPrivate) || Cabal.isHypercoreKey(channel)) {
-      return nextTick(cb, new Error('cannot join or leave private message channels'))
+      this.leavePrivateMessage(channel)
+      // switch back to the !status channel after leaving
+      this.unfocusChannel(channel, '!status')
+      cb(null)
+      return
     }
     var joined = this.getJoinedChannels()
     var details = this.channels[channel]
