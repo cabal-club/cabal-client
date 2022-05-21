@@ -382,7 +382,7 @@ class CabalDetails extends EventEmitter {
    * Query if the passed in channel name is private or not
    * @returns{boolean} true if channel is private, false if not (or if it doesn't exist)
    */
-  isChannelPrivate(channel) {
+  isChannelPrivate (channel) {
     const details = this.channels[channel]
     if (!details) { return false }
     return details.isPrivate
@@ -392,7 +392,7 @@ class CabalDetails extends EventEmitter {
    * Join a private message channel if it is not already joined.
    * @param {string} channel the key of the PM to join
    */
-  joinPrivateMessage(channel) {
+  joinPrivateMessage (channel) {
     this.settings.joinedPrivateMessages.push(channel)
     this.settings.joinedPrivateMessages = Array.from(new Set(this.settings.joinedPrivateMessages)) // dedupe array entries
     this.client.writeCabalSettings(this.key, this.settings)
@@ -402,7 +402,7 @@ class CabalDetails extends EventEmitter {
    * Leave a private message channel if it has not already been left.
    * @param {string} channel the key of the PM to leave
    */
-  leavePrivateMessage(channel) {
+  leavePrivateMessage (channel) {
     if (this.settings.joinedPrivateMessages.includes(channel)) {
       // Remove the private message from the joined setting
       this.settings.joinedPrivateMessages = this.settings.joinedPrivateMessages.filter((pm) => pm !== channel)

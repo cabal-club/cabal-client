@@ -132,7 +132,7 @@ class Client {
    * If the file doesn't exist, return {}.
    * @returns {object} the contents of the settings file
    */
-  readCabalSettingsFile() {
+  readCabalSettingsFile () {
     var settingsFilePath = Client.getCabalSettingsFile()
     if (fs.existsSync(settingsFilePath)) {
       return yaml.load(fs.readFileSync(settingsFilePath, 'utf8'))
