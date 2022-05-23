@@ -53,6 +53,13 @@ module.exports.getOpenedPMs = function (err, privates) {
       this.channels[pubkey] = new PMChannelDetails(this, cabal, pubkey)
     }
   })
+
+  // first time this client is running with a settings file for this cabal; explicitly join all already opened PMs 
+  // to make the UX less confusing for people upgrading their cabal clients "where did my PMs go??"
+  if (typeof this.client.readCabalSettingsFile()[this.key] === "undefined") {
+    privates.forEach(pubkey => this.joinPrivateMessage(pubkey))
+  }
+
   this._finish()
 }
 
