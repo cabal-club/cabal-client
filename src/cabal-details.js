@@ -120,6 +120,8 @@ class CabalDetails extends EventEmitter {
         const details = this.channels[channel]
         if (!details) { // incoming PM & no pm channel?! instantiate a pm channel asap!
           this.channels[channel] = new PMChannelDetails(this, this.core, channel)
+          // join it by default (separate setting to control this behaviour to be introduced)
+          this.joinPrivateMessage(channel)
         }
         this._emitUpdate('private-message', {
           channel,
