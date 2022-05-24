@@ -93,6 +93,7 @@ class CabalDetails extends EventEmitter {
     this.users = {} // public keys -> cabal-core use
     this.listeners = [] // keep track of listeners so we can remove them when we remove a cabal
     this.user = undefined
+    this.settings = client.getCabalSettings(this.key)
     this._initialize(done)
   }
 
@@ -118,7 +119,9 @@ class CabalDetails extends EventEmitter {
         channel = this.user.key === message.key ? channel : message.key
         const details = this.channels[channel]
         if (!details) { // incoming PM & no pm channel?! instantiate a pm channel asap!
-          this.channels[channel] = new PMChannelDetails(this.core, channel)
+          this.channels[channel] = new PMChannelDetails(this, this.core, channel)
+          // join it by default (separate setting to control this behaviour to be introduced)
+          this.joinPrivateMessage(channel)
         }
         this._emitUpdate('private-message', {
           channel,
@@ -336,7 +339,7 @@ class CabalDetails extends EventEmitter {
       .sort()
     // get all PMs with non-hidden users && sort them
     const sortedPMs = Object.keys(this.channels)
-      .filter(ch => (this.channels[ch].isPrivate) && !this.users[ch].isHidden())
+      .filter(ch => this.channels[ch].isPrivate && this.channels[ch].joined && !this.users[ch].isHidden())
       .sort()
     return Array.prototype.concat(["!status"], opts.includePM ? sortedPMs : [], sortedChannels)
   }
@@ -381,10 +384,32 @@ class CabalDetails extends EventEmitter {
    * Query if the passed in channel name is private or not
    * @returns{boolean} true if channel is private, false if not (or if it doesn't exist)
    */
-  isChannelPrivate(channel) {
+  isChannelPrivate (channel) {
     const details = this.channels[channel]
     if (!details) { return false }
     return details.isPrivate
+  }
+
+  /**
+   * Join a private message channel if it is not already joined.
+   * @param {string} channel the key of the PM to join
+   */
+  joinPrivateMessage (channel) {
+    this.settings.joinedPrivateMessages.push(channel)
+    this.settings.joinedPrivateMessages = Array.from(new Set(this.settings.joinedPrivateMessages)) // dedupe array entries
+    this.client.writeCabalSettings(this.key, this.settings)
+  }
+
+  /**
+   * Leave a private message channel if it has not already been left.
+   * @param {string} channel the key of the PM to leave
+   */
+  leavePrivateMessage (channel) {
+    if (this.settings.joinedPrivateMessages.includes(channel)) {
+      // Remove the private message from the joined setting
+      this.settings.joinedPrivateMessages = this.settings.joinedPrivateMessages.filter((pm) => pm !== channel)
+    }
+    this.client.writeCabalSettings(this.key, this.settings)
   }
 
   // redirects private messages posted via cabalDetails.publishMessage()
@@ -423,10 +448,14 @@ class CabalDetails extends EventEmitter {
     // check to see if we have opened a pm with this person before
     if (!pmInstance) {
       // if not: add a new PMChannelDetails instance to channels
-      this.channels[recipientKey] = new PMChannelDetails(this.core, recipientKey) 
-      // focus it
+      this.channels[recipientKey] = new PMChannelDetails(this, this.core, recipientKey)
+    }
+    // focus it if we're opening a new PM (or reopening a previously closed instance)
+    if (!pmInstance.joined) {
       this.focusChannel(recipientKey)
-    } else if (!pmInstance.isPrivate) { // pm channel is not an actual pm instance! this should probably never happen, though
+      this.joinPrivateMessage(recipientKey)
+    }
+    if (!pmInstance.isPrivate) { // pm channel is not an actual pm instance! this should probably never happen, though
       return cb(new Error("tried to publish a private message to a non-private message channel"))
     }
 
@@ -476,7 +505,13 @@ class CabalDetails extends EventEmitter {
     var details = this.channels[channel]
     // disallow joining a channel that is exactly another peer's public key
     if ((details && details.isPrivate) || Cabal.isHypercoreKey(channel)) {
-      return nextTick(cb, new Error("tried to join a private message channel (start a pm using /pm <name>)"))
+      if (details && details.isPrivate) {
+        // the private message already exists, rejoin it
+        this.joinPrivateMessage(details.recipient)
+        return nextTick(cb, null)
+      } else {
+        return nextTick(cb, new Error("tried to join a new private message channel (start a pm using /pm <name>)"))
+      }
     }
     // we created a channel
     if (!details) {
@@ -517,7 +552,11 @@ class CabalDetails extends EventEmitter {
       return nextTick(cb, new Error('cannot leave the !status channel'))
     }
     if ((details && details.isPrivate) || Cabal.isHypercoreKey(channel)) {
-      return nextTick(cb, new Error('cannot join or leave private message channels'))
+      this.leavePrivateMessage(channel)
+      // switch back to the !status channel after leaving
+      this.unfocusChannel(channel, '!status')
+      cb(null)
+      return
     }
     var joined = this.getJoinedChannels()
     var details = this.channels[channel]
