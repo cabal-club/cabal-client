@@ -1,5 +1,31 @@
 # Changelog
 
+## [7.3.0] - 2022-05-24
+
+### Changed
+
+- Use getter for PMChannelDetails.joined ([#89](https://github.com/cabal-club/cabal-client/issues/89)) (Daniel Chiquito).
+
+  The getter refers to the CabalDetails instance which holds the settings
+  for the cabal to determine if the private message channel should be
+  considered joined or not.
+
+  This has the side affect of requiring the CabalDetails when initializing
+  the PMChannelDetails, which involves changing the constructor signature.
+
+  This is technically a breaking change, however `ChannelDetails` is an internal implementation concern of
+  cabal-details and not intended to be one of the public facing api functions.
+
+### Added
+
+- Add methods to read/write a settings file ([#89](https://github.com/cabal-club/cabal-client/issues/89)) (Daniel Chiquito)
+- Add dependency on js-yaml ([#89](https://github.com/cabal-club/cabal-client/issues/89)) (Daniel Chiquito)
+- Leaving private messages functionality ([#89](https://github.com/cabal-club/cabal-client/issues/89)) (Daniel Chiquito & cblgh)
+
+### Fixed
+
+- Potential issue upstream in cabal-core when receiving ill-formatted PMs ([`e6e7308`](https://github.com/cabal-club/cabal-client/commit/e6e7308)) (cblgh)
+
 ## [7.2.2] - 2021-12-16
 
 ### Fixed
@@ -71,6 +97,8 @@ _The updated version of `cabal-core` indirectly contains major changes to the un
 ## [6.3.2] - 2021-05-01
 
 _This is not the first version, but the first version in this changelog to save some time._
+
+[7.3.0]: https://github.com/cabal-club/cabal-client/compare/v7.2.2...v7.3.0
 
 [7.2.2]: https://github.com/cabal-club/cabal-client/compare/v7.2.1...v7.2.2
 
