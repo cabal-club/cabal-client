@@ -449,12 +449,15 @@ class CabalDetails extends EventEmitter {
     if (!pmInstance) {
       // if not: add a new PMChannelDetails instance to channels
       this.channels[recipientKey] = new PMChannelDetails(this, this.core, recipientKey)
-      // focus it
+    }
+    // focus it if we're opening a new PM (or reopening a previously closed instance)
+    if (!pmInstance.joined) {
       this.focusChannel(recipientKey)
-    } else if (!pmInstance.isPrivate) { // pm channel is not an actual pm instance! this should probably never happen, though
+      this.joinPrivateMessage(recipientKey)
+    }
+    if (!pmInstance.isPrivate) { // pm channel is not an actual pm instance! this should probably never happen, though
       return cb(new Error("tried to publish a private message to a non-private message channel"))
     }
-    this.joinPrivateMessage(recipientKey)
 
     // publish message to cabal-core, where it will be encrypted
     this.core.publishPrivate(msg, recipientKey, (err) => {
