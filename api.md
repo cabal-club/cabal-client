@@ -14,6 +14,9 @@
 * [Client](#Client)
     * [new Client([opts])](#new_Client_new)
     * _instance_
+        * [.readCabalSettingsFile()](#Client+readCabalSettingsFile) ⇒ <code>object</code>
+        * [.getCabalSettings(key)](#Client+getCabalSettings) ⇒ <code>object</code>
+        * [.writeCabalSettings(key, settings)](#Client+writeCabalSettings)
         * [.resolveName(name, [cb])](#Client+resolveName)
         * [.createCabal()](#Client+createCabal) ⇒ <code>Promise</code>
         * [.addCabal(key, opts, cb)](#Client+addCabal) ⇒ <code>Promise</code>
@@ -48,6 +51,7 @@
         * [.generateKey()](#Client.generateKey) ⇒ <code>string</code>
         * [.scrubKey(key)](#Client.scrubKey) ⇒ <code>string</code>
         * [.getCabalDirectory()](#Client.getCabalDirectory) ⇒ <code>string</code>
+        * [.getCabalSettingsFile()](#Client.getCabalSettingsFile) ⇒ <code>string</code>
 
 
 * * *
@@ -75,6 +79,44 @@ Create a client instance from which to manage multiple
     - *persistentCache* <code>object</code> - specify a `read` and `write` to create a persistent DNS cache
         - read <code>function</code> - async cache lookup function
         - write <code>function</code> - async cache write function
+
+
+* * *
+
+<a name="Client+readCabalSettingsFile"></a>
+
+### client.readCabalSettingsFile() ⇒ <code>object</code>
+Read and parse the contents of the settings.yml file.
+If the file doesn't exist, return {}.
+
+**Returns**: <code>object</code> - the contents of the settings file  
+
+* * *
+
+<a name="Client+getCabalSettings"></a>
+
+### client.getCabalSettings(key) ⇒ <code>object</code>
+Get the settings for a given cabal from the settings.yml file.
+If the file doesn't exist or the given cabal has no settings, return the default settings.
+
+**Returns**: <code>object</code> - the cabal settings  
+**Params**
+
+- key <code>string</code> - the cabal
+
+
+* * *
+
+<a name="Client+writeCabalSettings"></a>
+
+### client.writeCabalSettings(key, settings)
+Reads the settings from the settings.yml file, updates the settings for the given cabal, then
+writes the revised settings to the settings.yml file.
+
+**Params**
+
+- key <code>string</code> - the cabal
+- settings <code>object</code> - the cabal settings
 
 
 * * *
@@ -497,6 +539,15 @@ Returns a string path of where all of the cabals are stored on the hard drive.
 
 * * *
 
+<a name="Client.getCabalSettingsFile"></a>
+
+### Client.getCabalSettingsFile() ⇒ <code>string</code>
+Returns a string path of where the cabal settings are stored on the hard drive.
+
+**Returns**: <code>string</code> - the cabal settings file path  
+
+* * *
+
 <a name="CabalDetails"></a>
 
 ## CabalDetails
@@ -517,6 +568,8 @@ Returns a string path of where all of the cabals are stored on the hard drive.
     * [.clearVirtualMessages([channel])](#CabalDetails+clearVirtualMessages)
     * [.getPrivateMessageList()](#CabalDetails+getPrivateMessageList)
     * [.isChannelPrivate()](#CabalDetails+isChannelPrivate)
+    * [.joinPrivateMessage(channel)](#CabalDetails+joinPrivateMessage)
+    * [.leavePrivateMessage(channel)](#CabalDetails+leavePrivateMessage)
     * [.publishPrivateMessage(msg, recipientKey, [cb])](#CabalDetails+publishPrivateMessage)
     * [.getJoinedChannels()](#CabalDetails+getJoinedChannels) ⇒ <code>Array.&lt;string&gt;</code>
     * [.getLocalUser()](#CabalDetails+getLocalUser) ⇒ <code>user</code>
@@ -727,6 +780,30 @@ Get the list of currently opened private message channels.
 Query if the passed in channel name is private or not
 
 **Returns{boolean}**: true if channel is private, false if not (or if it doesn't exist)  
+
+* * *
+
+<a name="CabalDetails+joinPrivateMessage"></a>
+
+### cabalDetails.joinPrivateMessage(channel)
+Join a private message channel if it is not already joined.
+
+**Params**
+
+- channel <code>string</code> - the key of the PM to join
+
+
+* * *
+
+<a name="CabalDetails+leavePrivateMessage"></a>
+
+### cabalDetails.leavePrivateMessage(channel)
+Leave a private message channel if it has not already been left.
+
+**Params**
+
+- channel <code>string</code> - the key of the PM to leave
+
 
 * * *
 
