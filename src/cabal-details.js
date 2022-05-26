@@ -444,12 +444,12 @@ class CabalDetails extends EventEmitter {
     if (!recipientKey in this.users) {
       return cb(new Error("tried to publish a private message to unknown public key"))
     }
-    let pmInstance = this.channels[recipientKey]
     // check to see if we have opened a pm with this person before
-    if (!pmInstance) {
+    if (!this.channels[recipientKey]) {
       // if not: add a new PMChannelDetails instance to channels
       this.channels[recipientKey] = new PMChannelDetails(this, this.core, recipientKey)
     }
+    let pmInstance = this.channels[recipientKey]
     // focus it if we're opening a new PM (or reopening a previously closed instance)
     if (!pmInstance.joined) {
       this.focusChannel(recipientKey)
