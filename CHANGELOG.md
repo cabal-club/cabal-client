@@ -1,5 +1,14 @@
 # Changelog
 
+## [7.3.1] - 2022-05-26
+### Fixed
+
+- Fix crash when creating new PM (Reorder PM null check ([#91](https://github.com/cabal-club/cabal-client/issues/91)) (Daniel Chiquito))
+
+  The previous ordering would cause an exception even if the null check
+  was triggered.
+
+
 ## [7.3.0] - 2022-05-24
 
 ### Changed
@@ -97,6 +106,8 @@ _The updated version of `cabal-core` indirectly contains major changes to the un
 ## [6.3.2] - 2021-05-01
 
 _This is not the first version, but the first version in this changelog to save some time._
+
+[7.3.1]: https://github.com/cabal-club/cabal-client/compare/v7.3.0...v7.3.1
 
 [7.3.0]: https://github.com/cabal-club/cabal-client/compare/v7.2.2...v7.3.0
 
