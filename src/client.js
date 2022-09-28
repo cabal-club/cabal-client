@@ -104,6 +104,7 @@ class Client {
    * // => '12345678...'
    */
   static scrubKey (key) {
+      if (!key || typeof key !== 'string') return ''
       // remove url search params; indexOf returns -1 if no params => would chop off the last character if used w/ slice
       if (key.indexOf("?") >= 0) { 
           return key.slice(0, key.indexOf("?")).replace('cabal://', '').replace('cbl://', '').replace('dat://', '').replace(/\//g, '')
@@ -298,6 +299,9 @@ class Client {
             resolve(details)
           }
         })
+      }, err => {
+        cb(err)
+        reject(err)
       })
     })
   }
