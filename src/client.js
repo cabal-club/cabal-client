@@ -105,7 +105,7 @@ class Client {
    */
   static scrubKey (key) {
       // remove url search params; indexOf returns -1 if no params => would chop off the last character if used w/ slice
-      if (key.indexOf("?") >= 0) { 
+      if (key.indexOf("?") >= 0) {
           return key.slice(0, key.indexOf("?")).replace('cabal://', '').replace('cbl://', '').replace('dat://', '').replace(/\//g, '')
       }
       return key.replace('cabal://', '').replace('cbl://', '').replace('dat://', '').replace(/\//g, '')
@@ -243,11 +243,15 @@ class Client {
     let dnsFailed = false
     if (typeof key === 'string') {
       cabalPromise = this.resolveName(key.trim()).then((resolvedKey) => {
-        // discard uri scheme and search params of cabal key, if present. returns 64 chr hex string
+        if (resolvedKey === null) {
+          dnsFailed = true
+          return
+        }
+
+        // verify that scrubbedKey is 64 ch hex string
         const scrubbedKey = Client.scrubKey(resolvedKey)
 
-        //  verify that scrubbedKey is 64 ch hex string
-        if (resolvedKey === null || !Cabal.isHypercoreKey(scrubbedKey)) {
+        if (!Cabal.isHypercoreKey(scrubbedKey)) {
           dnsFailed = true
           return
         }
@@ -278,7 +282,7 @@ class Client {
     }
     return new Promise((resolve, reject) => {
       cabalPromise.then((cabal) => {
-        if (dnsFailed) return reject(new Error('dns failed to resolve'))
+        if (dnsFailed) return reject(new Error(`Failed to resolve dns for key '${key}'`))
         cabal = this._coerceToCabal(cabal)
         cabal.ready(() => {
           if (!this.currentCabal) {
