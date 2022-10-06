@@ -248,7 +248,7 @@ class Client {
         const scrubbedKey = Client.scrubKey(resolvedKey)
 
         //  verify that scrubbedKey is 64 ch hex string
-        if (resolvedKey === null || !Cabal.isHypercoreKey(scrubbedKey)) {
+        if (scrubbedKey === '' || !Cabal.isHypercoreKey(scrubbedKey)) {
           dnsFailed = true
           return
         }
