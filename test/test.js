@@ -32,7 +32,7 @@ test('create a cabal', function (t) {
     })
 })
 
-test.only('try to join an unknown cabal by name', function (t) {
+test('try to join an unknown cabal by name', function (t) {
   t.plan(2)
 
   const dir = tmp.dirSync().name
@@ -102,7 +102,7 @@ test('check that local user is admin', function (t) {
                   rimraf.sync(dir)
                   res3()
                 })
-              }).then(() => t.pass())
+              }).then(() => t.pass('cleanup ok'))
             })
             .catch(err => {
               t.error(err)
