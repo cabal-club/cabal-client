@@ -32,6 +32,29 @@ test('create a cabal', function (t) {
     })
 })
 
+test('try to join an unknown cabal by name', function (t) {
+  t.plan(2)
+
+  const dir = tmp.dirSync().name
+  const client = new Client({
+    config: {
+      dbdir: dir
+    }
+  })
+  const opts = { noSwarm: true }
+  const garbageKey = "buzzlebopp"
+
+  client.addCabal(garbageKey, opts, (err, res) => {
+    t.ok(err)
+  })
+    .then((cabal) => {
+      t.fail('should have failed')
+    })
+    .catch(err => {
+      t.ok(err)
+    })
+})
+
 test('check that local user is admin', function (t) {
   t.plan(6)
 
@@ -79,7 +102,7 @@ test('check that local user is admin', function (t) {
                   rimraf.sync(dir)
                   res3()
                 })
-              }).then(() => t.pass())
+              }).then(() => t.pass('cleanup ok'))
             })
             .catch(err => {
               t.error(err)

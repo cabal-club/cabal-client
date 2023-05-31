@@ -1,5 +1,10 @@
 # Changelog
 
+## [7.3.2] - 2022-10-31
+### Fixed
+
+- Fix unhandled promise rejection when initializing a Client instance with a cabal name that can't be resolved. (Handles case of being unable to resolve a key. ([#94](https://github.com/cabal-club/cabal-client/issues/94)) (Kira Oakley))
+
 ## [7.3.1] - 2022-05-26
 ### Fixed
 
