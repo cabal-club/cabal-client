@@ -15,6 +15,7 @@
   },
   "scripts": {
     "test": "tape test/*.js",
+    "cover": "nyc --reporter=lcov --reporter=text-summary npm run test",
     "lint": "standard",
     "doc": "jsdoc2md --files src/client.js src/cabal-details.js --param-list-format list --separators --partial doc-gen/scope.hbs --helper doc-gen/helpers.js > api.md",
     "build": "browserify index.js --standalone CabalClient > bundle.js",
@@ -47,6 +48,7 @@
     "browserify": "^17.0.0",
     "hallmark": "^3.1.0",
     "jsdoc-to-markdown": "^5.0.2",
+    "nyc": "^15.1.0",
     "rimraf": "^3.0.2",
     "standard": "~12.0.0",
     "tape": "~4.9.1",
