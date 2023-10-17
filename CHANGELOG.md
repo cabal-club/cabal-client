@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.0.0] - 2023-10-17
+### Changed
+- Upgraded cabal-core to latest, to bring in hyperswarm changes.
+
 ## [7.3.2] - 2022-10-31
 ### Fixed
 
