@@ -1,5 +1,4 @@
 #~top ignores~
-package-lock.json
 node_modules/
 *.css
 *.vim
