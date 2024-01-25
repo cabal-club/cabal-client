@@ -76,9 +76,9 @@ module.exports.getLocalKeyCallback = function (err, lkey) {
       const details = this.channels[channel]
       if (!details) {
         this.channels[channel] = new ChannelDetails(cabal, channel)
-        // listen for updates that happen within the channel
-        cabal.messages.events.on(channel, this.messageListener.bind(this))
       }
+      // listen for updates that happen within the channel
+      cabal.messages.events.on(channel, this.messageListener.bind(this))
       this.channels[channel].joined = true
     }
     this._finish()
