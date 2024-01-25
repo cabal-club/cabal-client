@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.0.2] - 2024-01-25
+### Fixed
+- Fix race condition preventing message listeners from being set.
+
 ## [8.0.0] - 2023-10-17
 ### Changed
 - Upgraded cabal-core to latest, to bring in hyperswarm changes.
