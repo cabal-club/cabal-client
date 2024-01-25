@@ -557,6 +557,7 @@ Returns a string path of where the cabal settings are stored on the hard drive.
     * [new CabalDetails({, done)](#new_CabalDetails_new)
     * [.processLine([line], [cb])](#CabalDetails+processLine)
     * [.publishMessage(msg, [opts], [cb])](#CabalDetails+publishMessage)
+    * [.publishFile(msg, [opts], [cb])](#CabalDetails+publishFile)
     * [.publishNick(nick, [cb])](#CabalDetails+publishNick)
     * [.publishChannelTopic([channel], topic, cb)](#CabalDetails+publishChannelTopic)
     * [.getTopic([channel])](#CabalDetails+getTopic) ⇒ <code>string</code>
@@ -648,6 +649,34 @@ cabalDetails.publishMessage({
   type: 'chat/text',
   content: {
     text: 'hello world',
+    channel: 'cabal-dev'
+  }
+})
+```
+
+* * *
+
+
+<a name="CabalDetails+publishFile"></a>
+
+### cabalDetails.publishFile(msg, [opts], [cb])
+Publish a File up to consumer. See 
+[`cabal-core`](https://github.com/cabal-club/cabal-core/) 
+for the full list of options.
+
+**Params**
+
+- msg <code>object</code> - the full message objectmessage containing file info
+- *opts* <code>object</code> - options passed down to cabal.publish
+- *cb* <code>function</code> - callback function called when message is published
+
+**Example**  
+```js
+cabalDetails.publishMessage({
+  type: 'chat/files',
+  content: {
+    datKey: 'key'
+    filename: 'hello world',
     channel: 'cabal-dev'
   }
 })
