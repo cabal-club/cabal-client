@@ -1,12 +1,12 @@
 var Client = require('../src/client') // normally require('cabal-client')
 
-// we have two clients in this example, one for sending and one for recieving
+// we have two clients in this example, one for sending and one for receiving
 const client = new Client()
 const client2 = new Client()
 
 client.createCabal().then((cabalDetails) => {
   cabalDetails.on('new-message', ({ channel, author, message }) => {
-    console.log('Recieved: "' + message.value.content.text + '" in channel ' + channel)
+    console.log('Received: "' + message.value.content.text + '" in channel ' + channel)
   })
 
   cabalDetails.on('init', () => {
